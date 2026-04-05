@@ -20,11 +20,10 @@ log = logging.getLogger(__name__)
 TOKEN_LOCATIONS = [
     Path(__file__).parent / "garmin_tokens.json",
     Path(__file__).parent / "garmin-workout-uploader" / "garmin_tokens.json",
-    Path(__file__).parent.parent / "garmin_tokens.json",
     Path.home() / ".garminconnect" / "garmin_tokens.json",
 ]
 
-ENV_FILE = Path(__file__).parent.parent / ".env"
+ENV_FILE = Path(__file__).parent / ".env"
 
 RATE_LIMIT_DELAY = 10
 MAX_RETRIES = 5
@@ -89,7 +88,7 @@ def save_tokens(tokens: dict, locations: Optional[list] = None):
     if locations is None:
         locations = [
             Path(__file__).parent / "garmin_tokens.json",
-            Path(__file__).parent.parent / "garmin_tokens.json",
+            Path(__file__).parent / "garmin-workout-uploader" / "garmin_tokens.json",
             Path.home() / ".garminconnect" / "garmin_tokens.json",
         ]
     

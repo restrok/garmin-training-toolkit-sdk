@@ -3,9 +3,11 @@
 Complete system for analyzing Garmin data and generating personalized training plans.
 
 ```
-garmin/
+garmin-training-toolkit/
 ├── .env                      # Credentials & training goals
 ├── garmin_tokens.json        # Auth tokens (auto-generated)
+├── garmin_auth_browser.py   # Authentication (one time setup)
+├── garmin_utils.py           # Shared utilities
 ├── garmin-analyzer/          # Data collection & analysis
 └── garmin-workout-uploader/  # Workout upload & management
 ```
@@ -25,7 +27,6 @@ nano .env
 # Activate virtual environment
 source garmin-workout-uploader/.venv/bin/activate
 
-cd garmin-workout-uploader
 python garmin_auth_browser.py
 ```
 
@@ -53,19 +54,26 @@ python garmin_workout_uploader.py
 
 ## Commands
 
+### Authentication (one time)
+```bash
+source garmin-workout-uploader/.venv/bin/activate
+python garmin_auth_browser.py    # Browser-based login
+```
+
 ### garmin-analyzer
 ```bash
-source ../garmin-workout-uploader/.venv/bin/activate
+source garmin-workout-uploader/.venv/bin/activate
+cd garmin-analyzer
 python collector.py    # Collect data & generate report
 ```
 
 ### garmin-workout-uploader
 ```bash
-source .venv/bin/activate
+source garmin-workout-uploader/.venv/bin/activate
+cd garmin-workout-uploader
 python garmin_workout_uploader.py           # Upload workouts
 python garmin_workout_uploader.py --list   # List all workouts
 python garmin_workout_uploader.py --clean  # Remove old workouts
-python garmin_auth_browser.py               # Re-authenticate
 ```
 
 ## Training Goals (.env)
@@ -84,8 +92,10 @@ INTERVAL_PACE=5:15
 ## Project Structure
 
 ```
-garmin/
+garmin-training-toolkit/
 ├── .env                           # Your credentials & goals
+├── garmin_auth_browser.py         # Browser authentication
+├── garmin_utils.py                # Shared utilities
 ├── garmin-analyzer/
 │   ├── collector.py               # Data collector
 │   ├── data/
@@ -95,8 +105,8 @@ garmin/
 │   └── RESEARCH_TRAINING_PRINCIPLES.md
 └── garmin-workout-uploader/
     ├── garmin_workout_uploader.py # Main uploader
-    ├── garmin_auth_browser.py     # Browser auth
-    └── WORKOUTS = [...]          # Your training plan
+    ├── workouts.json              # Training plan
+    └── .venv/                     # Virtual environment
 ```
 
 ## Requirements
