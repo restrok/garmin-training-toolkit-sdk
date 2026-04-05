@@ -22,6 +22,9 @@ nano .env
 ### 2. Authenticate (one time)
 
 ```bash
+# Activate virtual environment
+source garmin-workout-uploader/.venv/bin/activate
+
 cd garmin-workout-uploader
 python garmin_auth_browser.py
 ```
@@ -41,7 +44,7 @@ python collector.py
 
 ### 5. Upload Workouts
 
-1. Copy the training plan to `garmin-workout-uploader/garmin_workout_uploader.py`
+1. Copy the training plan to `garmin-workout-uploader/workouts.json`
 2. Run:
 ```bash
 cd ../garmin-workout-uploader
@@ -52,11 +55,13 @@ python garmin_workout_uploader.py
 
 ### garmin-analyzer
 ```bash
+source ../garmin-workout-uploader/.venv/bin/activate
 python collector.py    # Collect data & generate report
 ```
 
 ### garmin-workout-uploader
 ```bash
+source .venv/bin/activate
 python garmin_workout_uploader.py           # Upload workouts
 python garmin_workout_uploader.py --list   # List all workouts
 python garmin_workout_uploader.py --clean  # Remove old workouts
@@ -96,8 +101,13 @@ garmin/
 
 ## Requirements
 
-- Python 3.10+
+- Python 3.10+ (see `.python-version`)
 - Chrome/Chromium (for browser authentication)
-- garminconnect library
-- pydantic
-- Playwright
+- Virtual environment (included in repo)
+
+Install dependencies:
+```bash
+cd garmin-workout-uploader
+pip install -r requirements.txt
+playwright install chromium
+```
