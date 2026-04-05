@@ -1,0 +1,945 @@
+[
+  {
+    "name": "Apr 4 - Easy Run 35min",
+    "date": "2026-04-04",
+    "description": "Easy recovery run. Keep HR Zone 2.",
+    "duration": 2100,
+    "steps": [
+      [
+        "warmup",
+        300
+      ],
+      [
+        "run",
+        1500
+      ],
+      [
+        "cooldown",
+        300
+      ]
+    ]
+  },
+  {
+    "name": "Apr 7 - Easy Run 35min",
+    "date": "2026-04-07",
+    "description": "Easy conversational pace.",
+    "duration": 2100,
+    "steps": [
+      [
+        "warmup",
+        300
+      ],
+      [
+        "run",
+        1500
+      ],
+      [
+        "cooldown",
+        300
+      ]
+    ]
+  },
+  {
+    "name": "Apr 12 - Long Run 45min",
+    "date": "2026-04-12",
+    "description": "Long easy run. Build base.",
+    "duration": 2700,
+    "steps": [
+      [
+        "warmup",
+        300
+      ],
+      [
+        "run",
+        2100
+      ],
+      [
+        "cooldown",
+        300
+      ]
+    ]
+  },
+  {
+    "name": "Apr 14 - Easy Run 40min",
+    "date": "2026-04-14",
+    "description": "Easy run. HR Zone 2.",
+    "duration": 2400,
+    "steps": [
+      [
+        "warmup",
+        300
+      ],
+      [
+        "run",
+        1800
+      ],
+      [
+        "cooldown",
+        300
+      ]
+    ]
+  },
+  {
+    "name": "Apr 16 - Easy Run 40min",
+    "date": "2026-04-16",
+    "description": "Recovery run.",
+    "duration": 2400,
+    "steps": [
+      [
+        "warmup",
+        300
+      ],
+      [
+        "run",
+        1800
+      ],
+      [
+        "cooldown",
+        300
+      ]
+    ]
+  },
+  {
+    "name": "Apr 19 - Long Run 50min",
+    "date": "2026-04-19",
+    "description": "Long easy run.",
+    "duration": 3000,
+    "steps": [
+      [
+        "warmup",
+        300
+      ],
+      [
+        "run",
+        2400
+      ],
+      [
+        "cooldown",
+        300
+      ]
+    ]
+  },
+  {
+    "name": "Apr 21 - Easy Run 45min",
+    "date": "2026-04-21",
+    "description": "Easy run. Building consistency.",
+    "duration": 2700,
+    "steps": [
+      [
+        "warmup",
+        300
+      ],
+      [
+        "run",
+        2100
+      ],
+      [
+        "cooldown",
+        300
+      ]
+    ]
+  },
+  {
+    "name": "Apr 23 - Easy Run 40min",
+    "date": "2026-04-23",
+    "description": "Recovery run.",
+    "duration": 2400,
+    "steps": [
+      [
+        "warmup",
+        300
+      ],
+      [
+        "run",
+        1800
+      ],
+      [
+        "cooldown",
+        300
+      ]
+    ]
+  },
+  {
+    "name": "Apr 26 - Long Run 55min",
+    "date": "2026-04-26",
+    "description": "Long easy run.",
+    "duration": 3300,
+    "steps": [
+      [
+        "warmup",
+        300
+      ],
+      [
+        "run",
+        2700
+      ],
+      [
+        "cooldown",
+        300
+      ]
+    ]
+  },
+  {
+    "name": "Apr 28 - Easy Run 35min",
+    "date": "2026-04-28",
+    "description": "Easy. Deload week - reduced volume.",
+    "duration": 2100,
+    "steps": [
+      [
+        "warmup",
+        300
+      ],
+      [
+        "run",
+        1500
+      ],
+      [
+        "cooldown",
+        300
+      ]
+    ]
+  },
+  {
+    "name": "Apr 30 - Easy Run 35min",
+    "date": "2026-04-30",
+    "description": "Recovery. Light week.",
+    "duration": 2100,
+    "steps": [
+      [
+        "warmup",
+        300
+      ],
+      [
+        "run",
+        1500
+      ],
+      [
+        "cooldown",
+        300
+      ]
+    ]
+  },
+  {
+    "name": "May 3 - Long Run 50min",
+    "date": "2026-05-03",
+    "description": "Long easy. Reduced volume.",
+    "duration": 3000,
+    "steps": [
+      [
+        "warmup",
+        300
+      ],
+      [
+        "run",
+        2400
+      ],
+      [
+        "cooldown",
+        300
+      ]
+    ]
+  },
+  {
+    "name": "May 5 - Easy Run 45min",
+    "date": "2026-05-05",
+    "description": "Easy run. Building back.",
+    "duration": 2700,
+    "steps": [
+      [
+        "warmup",
+        300
+      ],
+      [
+        "run",
+        2100
+      ],
+      [
+        "cooldown",
+        300
+      ]
+    ]
+  },
+  {
+    "name": "May 7 - Easy Run 45min",
+    "date": "2026-05-07",
+    "description": "Recovery run.",
+    "duration": 2700,
+    "steps": [
+      [
+        "warmup",
+        300
+      ],
+      [
+        "run",
+        2100
+      ],
+      [
+        "cooldown",
+        300
+      ]
+    ]
+  },
+  {
+    "name": "May 10 - Long Run 60min",
+    "date": "2026-05-10",
+    "description": "Long run. Building endurance.",
+    "duration": 3600,
+    "steps": [
+      [
+        "warmup",
+        300
+      ],
+      [
+        "run",
+        3000
+      ],
+      [
+        "cooldown",
+        300
+      ]
+    ]
+  },
+  {
+    "name": "May 12 - Easy Run 45min",
+    "date": "2026-05-12",
+    "description": "Easy run.",
+    "duration": 2700,
+    "steps": [
+      [
+        "warmup",
+        300
+      ],
+      [
+        "run",
+        2100
+      ],
+      [
+        "cooldown",
+        300
+      ]
+    ]
+  },
+  {
+    "name": "May 14 - Tempo Run 35min",
+    "date": "2026-05-14",
+    "description": "Tempo: Warm-up 10min, Tempo 20min @ 5:45/km, Cool-down 5min.",
+    "duration": 2100,
+    "steps": [
+      [
+        "warmup",
+        600
+      ],
+      [
+        "run",
+        1200
+      ],
+      [
+        "cooldown",
+        300
+      ]
+    ]
+  },
+  {
+    "name": "May 17 - Long Run 65min",
+    "date": "2026-05-17",
+    "description": "Long run.",
+    "duration": 3900,
+    "steps": [
+      [
+        "warmup",
+        300
+      ],
+      [
+        "run",
+        3300
+      ],
+      [
+        "cooldown",
+        300
+      ]
+    ]
+  },
+  {
+    "name": "May 19 - Easy Run 45min",
+    "date": "2026-05-19",
+    "description": "Easy run.",
+    "duration": 2700,
+    "steps": [
+      [
+        "warmup",
+        300
+      ],
+      [
+        "run",
+        2100
+      ],
+      [
+        "cooldown",
+        300
+      ]
+    ]
+  },
+  {
+    "name": "May 21 - Easy Run 40min",
+    "date": "2026-05-21",
+    "description": "Recovery run.",
+    "duration": 2400,
+    "steps": [
+      [
+        "warmup",
+        300
+      ],
+      [
+        "run",
+        1800
+      ],
+      [
+        "cooldown",
+        300
+      ]
+    ]
+  },
+  {
+    "name": "May 24 - Long Run 70min",
+    "date": "2026-05-24",
+    "description": "Long run. Building time on feet.",
+    "duration": 4200,
+    "steps": [
+      [
+        "warmup",
+        300
+      ],
+      [
+        "run",
+        3600
+      ],
+      [
+        "cooldown",
+        300
+      ]
+    ]
+  },
+  {
+    "name": "May 26 - Easy Run 35min",
+    "date": "2026-05-26",
+    "description": "Easy. Deload week.",
+    "duration": 2100,
+    "steps": [
+      [
+        "warmup",
+        300
+      ],
+      [
+        "run",
+        1500
+      ],
+      [
+        "cooldown",
+        300
+      ]
+    ]
+  },
+  {
+    "name": "May 28 - Easy Run 35min",
+    "date": "2026-05-28",
+    "description": "Recovery. Light.",
+    "duration": 2100,
+    "steps": [
+      [
+        "warmup",
+        300
+      ],
+      [
+        "run",
+        1500
+      ],
+      [
+        "cooldown",
+        300
+      ]
+    ]
+  },
+  {
+    "name": "May 31 - Long Run 55min",
+    "date": "2026-05-31",
+    "description": "Long easy. Reduced volume.",
+    "duration": 3300,
+    "steps": [
+      [
+        "warmup",
+        300
+      ],
+      [
+        "run",
+        2700
+      ],
+      [
+        "cooldown",
+        300
+      ]
+    ]
+  },
+  {
+    "name": "Jun 2 - Easy Run 45min",
+    "date": "2026-06-02",
+    "description": "Easy run.",
+    "duration": 2700,
+    "steps": [
+      [
+        "warmup",
+        300
+      ],
+      [
+        "run",
+        2100
+      ],
+      [
+        "cooldown",
+        300
+      ]
+    ]
+  },
+  {
+    "name": "Jun 4 - Intervals 5x600m",
+    "date": "2026-06-04",
+    "description": "Intervals: 5x600m @ 5:15/km, 90s recovery.",
+    "duration": 2700,
+    "steps": [
+      [
+        "warmup",
+        600
+      ],
+      [
+        "interval",
+        180,
+        90
+      ],
+      [
+        "interval",
+        180,
+        90
+      ],
+      [
+        "interval",
+        180,
+        90
+      ],
+      [
+        "interval",
+        180,
+        90
+      ],
+      [
+        "interval",
+        180,
+        0
+      ],
+      [
+        "cooldown",
+        300
+      ]
+    ]
+  },
+  {
+    "name": "Jun 7 - Long Run 75min",
+    "date": "2026-06-07",
+    "description": "Long run. Peak time.",
+    "duration": 4500,
+    "steps": [
+      [
+        "warmup",
+        300
+      ],
+      [
+        "run",
+        3900
+      ],
+      [
+        "cooldown",
+        300
+      ]
+    ]
+  },
+  {
+    "name": "Jun 9 - Easy Run 45min",
+    "date": "2026-06-09",
+    "description": "Easy run.",
+    "duration": 2700,
+    "steps": [
+      [
+        "warmup",
+        300
+      ],
+      [
+        "run",
+        2100
+      ],
+      [
+        "cooldown",
+        300
+      ]
+    ]
+  },
+  {
+    "name": "Jun 11 - Tempo Run 40min",
+    "date": "2026-06-11",
+    "description": "Tempo: Warm-up 10min, Tempo 25min @ 5:45/km, Cool-down 5min.",
+    "duration": 2400,
+    "steps": [
+      [
+        "warmup",
+        600
+      ],
+      [
+        "run",
+        1500
+      ],
+      [
+        "cooldown",
+        300
+      ]
+    ]
+  },
+  {
+    "name": "Jun 14 - Long Run 80min",
+    "date": "2026-06-14",
+    "description": "Long run. Peak volume.",
+    "duration": 4800,
+    "steps": [
+      [
+        "warmup",
+        300
+      ],
+      [
+        "run",
+        4200
+      ],
+      [
+        "cooldown",
+        300
+      ]
+    ]
+  },
+  {
+    "name": "Jun 16 - Easy Run 45min",
+    "date": "2026-06-16",
+    "description": "Easy run.",
+    "duration": 2700,
+    "steps": [
+      [
+        "warmup",
+        300
+      ],
+      [
+        "run",
+        2100
+      ],
+      [
+        "cooldown",
+        300
+      ]
+    ]
+  },
+  {
+    "name": "Jun 18 - Intervals 6x600m",
+    "date": "2026-06-18",
+    "description": "Intervals: 6x600m @ 5:15/km, 90s recovery.",
+    "duration": 3000,
+    "steps": [
+      [
+        "warmup",
+        600
+      ],
+      [
+        "interval",
+        180,
+        90
+      ],
+      [
+        "interval",
+        180,
+        90
+      ],
+      [
+        "interval",
+        180,
+        90
+      ],
+      [
+        "interval",
+        180,
+        90
+      ],
+      [
+        "interval",
+        180,
+        90
+      ],
+      [
+        "interval",
+        180,
+        0
+      ],
+      [
+        "cooldown",
+        300
+      ]
+    ]
+  },
+  {
+    "name": "Jun 21 - Long Run 85min",
+    "date": "2026-06-21",
+    "description": "Long run. Max volume.",
+    "duration": 5100,
+    "steps": [
+      [
+        "warmup",
+        300
+      ],
+      [
+        "run",
+        4500
+      ],
+      [
+        "cooldown",
+        300
+      ]
+    ]
+  },
+  {
+    "name": "Jun 23 - Easy Run 35min",
+    "date": "2026-06-23",
+    "description": "Easy. Deload week.",
+    "duration": 2100,
+    "steps": [
+      [
+        "warmup",
+        300
+      ],
+      [
+        "run",
+        1500
+      ],
+      [
+        "cooldown",
+        300
+      ]
+    ]
+  },
+  {
+    "name": "Jun 25 - Easy Run 35min",
+    "date": "2026-06-25",
+    "description": "Recovery. Light.",
+    "duration": 2100,
+    "steps": [
+      [
+        "warmup",
+        300
+      ],
+      [
+        "run",
+        1500
+      ],
+      [
+        "cooldown",
+        300
+      ]
+    ]
+  },
+  {
+    "name": "Jun 28 - Long Run 60min",
+    "date": "2026-06-28",
+    "description": "Long easy. Reduced.",
+    "duration": 3600,
+    "steps": [
+      [
+        "warmup",
+        300
+      ],
+      [
+        "run",
+        3000
+      ],
+      [
+        "cooldown",
+        300
+      ]
+    ]
+  },
+  {
+    "name": "Jun 30 - Easy Run 40min",
+    "date": "2026-06-30",
+    "description": "Easy run.",
+    "duration": 2400,
+    "steps": [
+      [
+        "warmup",
+        300
+      ],
+      [
+        "run",
+        1800
+      ],
+      [
+        "cooldown",
+        300
+      ]
+    ]
+  },
+  {
+    "name": "Jul 2 - Tempo Run 40min",
+    "date": "2026-07-02",
+    "description": "Tempo: Warm-up 10min, Tempo 25min @ 5:40/km, Cool-down 5min.",
+    "duration": 2400,
+    "steps": [
+      [
+        "warmup",
+        600
+      ],
+      [
+        "run",
+        1500
+      ],
+      [
+        "cooldown",
+        300
+      ]
+    ]
+  },
+  {
+    "name": "Jul 5 - Long Run 50min",
+    "date": "2026-07-05",
+    "description": "Long easy. Taper.",
+    "duration": 3000,
+    "steps": [
+      [
+        "warmup",
+        300
+      ],
+      [
+        "run",
+        2400
+      ],
+      [
+        "cooldown",
+        300
+      ]
+    ]
+  },
+  {
+    "name": "Jul 7 - Easy Run 30min",
+    "date": "2026-07-07",
+    "description": "Easy. Pre-race week.",
+    "duration": 1800,
+    "steps": [
+      [
+        "warmup",
+        300
+      ],
+      [
+        "run",
+        1200
+      ],
+      [
+        "cooldown",
+        300
+      ]
+    ]
+  },
+  {
+    "name": "Jul 9 - Intervals 4x400m",
+    "date": "2026-07-09",
+    "description": "Fast intervals: 4x400m @ 5:00/km, 90s recovery. Sharpening.",
+    "duration": 2400,
+    "steps": [
+      [
+        "warmup",
+        600
+      ],
+      [
+        "interval",
+        120,
+        90
+      ],
+      [
+        "interval",
+        120,
+        90
+      ],
+      [
+        "interval",
+        120,
+        90
+      ],
+      [
+        "interval",
+        120,
+        0
+      ],
+      [
+        "cooldown",
+        300
+      ]
+    ]
+  },
+  {
+    "name": "Jul 12 - Long Run 40min",
+    "date": "2026-07-12",
+    "description": "Long easy. Last long run.",
+    "duration": 2400,
+    "steps": [
+      [
+        "warmup",
+        300
+      ],
+      [
+        "run",
+        1800
+      ],
+      [
+        "cooldown",
+        300
+      ]
+    ]
+  },
+  {
+    "name": "Jul 13 - Easy Run 20min",
+    "date": "2026-07-13",
+    "description": "Very easy. Shakeout.",
+    "duration": 1200,
+    "steps": [
+      [
+        "warmup",
+        300
+      ],
+      [
+        "run",
+        600
+      ],
+      [
+        "cooldown",
+        300
+      ]
+    ]
+  },
+  {
+    "name": "Jul 15 - 10K RACE DAY",
+    "date": "2026-07-15",
+    "description": "Race: 10K @ 5:30/km. You've trained for this!",
+    "duration": 3600,
+    "steps": [
+      [
+        "warmup",
+        300
+      ],
+      [
+        "run",
+        3000
+      ],
+      [
+        "cooldown",
+        300
+      ]
+    ]
+  }
+]
