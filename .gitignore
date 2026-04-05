@@ -1,0 +1,20 @@
+# Environment
+.env
+.env.local
+
+# Tokens
+garmin_tokens.json
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# OS
+.DS_Store
+Thumbs.db

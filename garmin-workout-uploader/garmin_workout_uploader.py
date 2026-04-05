@@ -1,0 +1,285 @@
+#!/usr/bin/env python3
+"""
+Garmin Connect Workout Uploader with Cloudflare bypass
+Adds delays between login attempts and retries
+"""
+
+import json
+import logging
+import random
+import sys
+import time
+from pathlib import Path
+
+from garminconnect import Garmin
+from garminconnect.workout import (
+    RunningWorkout,
+    WorkoutSegment,
+    create_cooldown_step,
+    create_interval_step,
+    create_recovery_step,
+    create_warmup_step,
+)
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from garmin_utils import (
+    find_token_file,
+    get_authenticated_client,
+    load_env_file,
+    validate_workouts_file,
+    REQUEST_DELAY_MIN,
+    REQUEST_DELAY_MAX,
+)
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(levelname)s: %(message)s"
+)
+log = logging.getLogger(__name__)
+
+WORKOUTS_FILE = Path(__file__).parent / "workouts.json"
+
+
+def load_workouts():
+    """Load and validate workouts from JSON file."""
+    if not WORKOUTS_FILE.exists():
+        log.error(f"{WORKOUTS_FILE} not found!")
+        return []
+    
+    valid, errors = validate_workouts_file(WORKOUTS_FILE)
+    if not valid:
+        for error in errors:
+            log.error(f"Workout validation error: {error}")
+        return []
+    
+    with open(WORKOUTS_FILE) as f:
+        workouts = json.load(f)
+    
+    log.info(f"Loaded {len(workouts)} workouts from {WORKOUTS_FILE}")
+    return workouts
+
+
+WORKOUTS = load_workouts()
+
+
+def login_with_retry(client, max_retries=5, initial_delay=10):
+    """Try to login with exponential backoff and jitter."""
+    for attempt in range(max_retries):
+        try:
+            log.info(f"Attempt {attempt + 1}/{max_retries}...")
+            client.login()
+            return True
+        except Exception as e:
+            error_msg = str(e)
+            log.warning(f"Login failed: {error_msg[:100]}")
+            
+            if "429" in error_msg or "rate limit" in error_msg.lower():
+                delay = min(initial_delay * (2 ** attempt) + random.uniform(0, 5), 300)
+                log.info(f"Rate limited! Waiting {delay:.0f} seconds...")
+                time.sleep(delay)
+            elif "portal" in error_msg.lower() or "cloudflare" in error_msg.lower():
+                delay = initial_delay + random.uniform(0, 10)
+                log.info(f"Cloudflare blocking. Waiting {delay:.0f} seconds...")
+                time.sleep(delay)
+            else:
+                return False
+    
+    return False
+
+
+def get_client():
+    """Get authenticated Garmin client."""
+    import os
+    load_env_file()
+    token_path = find_token_file()
+    
+    if token_path:
+        log.info(f"Using saved tokens from: {token_path}")
+        return get_authenticated_client(token_path)
+    
+    email = os.getenv("GARMIN_EMAIL")
+    password = os.getenv("GARMIN_PASSWORD")
+    if not email or not password:
+        log.error("No tokens and no credentials. Run garmin_auth_browser.py first.")
+        sys.exit(1)
+    
+    client = Garmin(email, password)
+    if not login_with_retry(client, max_retries=3, initial_delay=15):
+        log.error("Login failed.")
+        sys.exit(1)
+    log.info("Logged in successfully!")
+    return client
+
+
+def create_workout(workout_data):
+    """Create a RunningWorkout from workout data."""
+    steps = []
+    order = 1
+    
+    for step_data in workout_data["steps"]:
+        step_type = step_data[0]
+        duration = step_data[1]
+        recovery = step_data[2] if len(step_data) > 2 else None
+        
+        if step_type == "warmup":
+            steps.append(create_warmup_step(float(duration), order))
+            order += 1
+        elif step_type == "cooldown":
+            steps.append(create_cooldown_step(float(duration), order))
+            order += 1
+        elif step_type == "run":
+            steps.append(create_interval_step(float(duration), order))
+            order += 1
+        elif step_type == "interval":
+            steps.append(create_interval_step(float(duration), order))
+            order += 1
+            if recovery and recovery > 0:
+                steps.append(create_recovery_step(float(recovery), order))
+                order += 1
+    
+    return RunningWorkout(
+        workoutName=workout_data["name"],
+        description=workout_data["description"],
+        estimatedDurationInSecs=workout_data["duration"],
+        workoutSegments=[
+            WorkoutSegment(
+                segmentOrder=1,
+                sportType={"sportTypeId": 1, "sportTypeKey": "running"},
+                workoutSteps=steps
+            )
+        ]
+    )
+
+
+def delete_workout(client, workout_id):
+    """Delete a workout by ID."""
+    try:
+        client.delete_workout(workout_id)
+        return True
+    except Exception as e:
+        log.error(f"Error deleting {workout_id}: {e}")
+        return False
+
+
+def clean_old_workouts(client, month_prefix=None):
+    """Delete old workouts from previous plans (keeps newest version of each)."""
+    log.info("Fetching all workouts...")
+    
+    try:
+        all_workouts = client.get_workouts()
+    except Exception as e:
+        log.error(f"Error fetching workouts: {e}")
+        return
+    
+    log.info(f"Found {len(all_workouts)} total workouts")
+    
+    by_name = {}
+    for w in all_workouts:
+        name = w.get("workoutName", "")
+        if month_prefix and not name.startswith(month_prefix):
+            continue
+        if name not in by_name:
+            by_name[name] = []
+        by_name[name].append(w)
+    
+    duplicates = {name: ws for name, ws in by_name.items() if len(ws) > 1}
+    
+    if not duplicates:
+        log.info(f"No old workouts found for '{month_prefix or 'all'}'!")
+        return
+    
+    log.info(f"Found {len(duplicates)} old workout groups:")
+    
+    to_delete = []
+    for name, workouts in sorted(duplicates.items()):
+        log.info(f"{name}: {len(workouts)} copies")
+        workouts_sorted = sorted(workouts, key=lambda x: x.get("workoutId", 0))
+        keep = workouts_sorted[-1]
+        delete = workouts_sorted[:-1]
+        
+        log.info(f"Keeping: ID {keep.get('workoutId')} (newer)")
+        for w in delete:
+            log.info(f"Deleting: ID {w.get('workoutId')}")
+            to_delete.append(w.get("workoutId"))
+    
+    if not to_delete:
+        log.info("No duplicates to delete!")
+        return
+    
+    log.info(f"Deleting {len(to_delete)} duplicate workouts...")
+    for i, wid in enumerate(to_delete, 1):
+        log.info(f"[{i}/{len(to_delete)}] Deleting {wid}...")
+        if delete_workout(client, wid):
+            time.sleep(0.5)
+    
+    log.info(f"Removed {len(to_delete)} old workouts!")
+
+
+def main():
+    import argparse
+    
+    parser = argparse.ArgumentParser(description="Garmin Workout Uploader")
+    parser.add_argument("--clean", metavar="MONTH", help="Remove old workouts (e.g., Apr, May, Jun)")
+    parser.add_argument("--clean-all", action="store_true", help="Remove ALL old plan workouts (no filter)")
+    parser.add_argument("--yes", action="store_true", help="Skip confirmation prompt for --clean")
+    parser.add_argument("--list", action="store_true", help="List all scheduled workouts")
+    parser.add_argument("--delete", metavar="ID", help="Delete a specific workout by ID")
+    args = parser.parse_args()
+    
+    log.info("Garmin Connect Workout Manager")
+    log.info("=" * 40)
+    
+    client = get_client()
+    
+    if args.clean or args.clean_all:
+        prefix = None if args.clean_all else args.clean
+        if not args.yes:
+            resp = input(f"Delete old workouts{' for ' + prefix if prefix else ''}? [y/N] ")
+            if resp.lower() != 'y':
+                log.info("Cancelled.")
+                return
+        clean_old_workouts(client, prefix)
+        return
+    
+    if args.list:
+        workouts = client.get_workouts()
+        log.info(f"{len(workouts)} total workouts:")
+        for w in sorted(workouts, key=lambda x: x.get("workoutName", "")):
+            log.info(f"  {w.get('workoutName')} (ID: {w.get('workoutId')})")
+        return
+    
+    if args.delete:
+        log.info(f"Deleting workout {args.delete}...")
+        if delete_workout(client, args.delete):
+            log.info("Deleted!")
+        return
+    
+    log.info("Uploading and scheduling workouts...")
+    
+    for i, workout_data in enumerate(WORKOUTS, 1):
+        log.info(f"[{i}/{len(WORKOUTS)}] {workout_data['name']} on {workout_data['date']}")
+        
+        try:
+            workout = create_workout(workout_data)
+            
+            result = client.upload_running_workout(workout)
+            workout_id = result.get("workoutId") or result[0].get("workoutId")
+            log.info(f"Uploaded (ID: {workout_id})")
+            
+            time.sleep(REQUEST_DELAY_MIN + random.uniform(0, REQUEST_DELAY_MAX - REQUEST_DELAY_MIN))
+            
+            client.schedule_workout(workout_id, workout_data["date"])
+            log.info("Scheduled")
+            
+            time.sleep(REQUEST_DELAY_MIN + random.uniform(0, REQUEST_DELAY_MAX - REQUEST_DELAY_MIN))
+            
+        except Exception as e:
+            log.error(f"Error: {e}")
+            continue
+    
+    log.info("Done!")
+
+
+if __name__ == "__main__":
+    main()
