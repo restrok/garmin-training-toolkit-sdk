@@ -90,26 +90,15 @@ def login_with_retry(client, max_retries=5, initial_delay=10):
 
 def get_client():
     """Get authenticated Garmin client."""
-    import os
-    load_env_file()
     token_path = find_token_file()
     
-    if token_path:
-        log.info(f"Using saved tokens from: {token_path}")
-        return get_authenticated_client(token_path)
-    
-    email = os.getenv("GARMIN_EMAIL")
-    password = os.getenv("GARMIN_PASSWORD")
-    if not email or not password:
-        log.error("No tokens and no credentials. Run garmin_auth_browser.py first.")
+    if not token_path:
+        log.error("No tokens found. Run: python3 garmin.py auth")
+        import sys
         sys.exit(1)
     
-    client = Garmin(email, password)
-    if not login_with_retry(client, max_retries=3, initial_delay=15):
-        log.error("Login failed.")
-        sys.exit(1)
-    log.info("Logged in successfully!")
-    return client
+    log.info(f"Using saved tokens from: {token_path}")
+    return get_authenticated_client(token_path)
 
 
 def create_workout(workout_data):

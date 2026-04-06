@@ -1,123 +1,191 @@
 # Garmin Connect Training System
 
-Complete system for analyzing Garmin data and generating personalized training plans.
-
-```
-garmin-training-toolkit/
-├── .env                      # Credentials & training goals
-├── garmin_tokens.json        # Auth tokens (auto-generated)
-├── garmin_auth_browser.py   # Authentication (one time setup)
-├── garmin_utils.py           # Shared utilities
-├── garmin-analyzer/          # Data collection & analysis
-└── garmin-workout-uploader/  # Workout upload & management
-```
+A complete system for analyzing Garmin Connect data and generating personalized training plans with workout upload capability.
 
 ## Quick Start
 
-### 1. Setup
-
 ```bash
-# Configure your training goals
-nano .env
+# 1. Authenticate (browser opens - log in with Garmin credentials)
+python3 garmin.py auth
+
+# 2. Collect your data from Garmin Connect
+python3 garmin.py collect
+
+# 3. Analyze & Predict
+python3 garmin.py progress      # Training stats
+python3 garmin.py zones         # Personalized HR zones
+python3 garmin.py recovery      # HRV & readiness
+python3 garmin.py predict      # Race time predictions
+python3 garmin.py best          # Best times
+
+# 4. Generate & Upload Plan
+python3 garmin.py plan    # Create training plan
+python3 garmin.py upload  # Upload to Garmin Connect
 ```
 
-### 2. Authenticate (one time)
+---
 
-```bash
-# Activate virtual environment
-source garmin-workout-uploader/.venv/bin/activate
+## CLI Commands Reference
 
-python garmin_auth_browser.py
-```
+| Command | Description | Options |
+|---------|-------------|---------|
+| `auth` | Browser authentication | `--headless`, `--timeout 300` |
+| `collect` | Fetch data from Garmin | (auto-auth if needed) |
+| `progress` | Training statistics | `--days 90` |
+| `zones` | Data-driven HR zones | |
+| `recovery` | HRV & readiness | |
+| `predict` | Race predictions | |
+| `best` | Best race times | `--distance 10k`, `--limit 5` |
+| `compare` | Plan vs training | |
+| `export` | Full report | `--file output.md` |
+| `plan` | Generate plan | |
+| `upload` | Upload workouts | |
 
-### 3. Collect & Analyze
+---
 
-```bash
-cd ../garmin-analyzer
-python collector.py
-```
+## Configuration (.env file)
 
-### 4. Generate Training Plan
-
-1. Open `garmin-analyzer/data/garmin_report.md`
-2. Share with an LLM (e.g., Claude)
-3. Ask: "Create a 10K training plan based on this data"
-
-### 5. Upload Workouts
-
-1. Copy the training plan to `garmin-workout-uploader/workouts.json`
-2. Run:
-```bash
-cd ../garmin-workout-uploader
-python garmin_workout_uploader.py
-```
-
-## Commands
-
-### Authentication (one time)
-```bash
-source garmin-workout-uploader/.venv/bin/activate
-python garmin_auth_browser.py    # Browser-based login
-```
-
-### garmin-analyzer
-```bash
-source garmin-workout-uploader/.venv/bin/activate
-cd garmin-analyzer
-python collector.py    # Collect data & generate report
-```
-
-### garmin-workout-uploader
-```bash
-source garmin-workout-uploader/.venv/bin/activate
-cd garmin-workout-uploader
-python garmin_workout_uploader.py           # Upload workouts
-python garmin_workout_uploader.py --list   # List all workouts
-python garmin_workout_uploader.py --clean  # Remove old workouts
-```
-
-## Training Goals (.env)
+Create `.env` in project root:
 
 ```env
+# Training Goals
 GOAL_RACE=10K
 GOAL_DATE=2026-07-15
 TRAINING_DAYS=3
 MAX_SESSION_MINUTES=90
+
+# Pace Targets (min:sec per km)
 RACE_PACE_TARGET=5:30
 EASY_PACE=6:00
 TEMPO_PACE=5:45
 INTERVAL_PACE=5:15
 ```
 
-## Project Structure
+---
+
+## Data Flow
 
 ```
-garmin-training-toolkit/
-├── .env                           # Your credentials & goals
-├── garmin_auth_browser.py         # Browser authentication
-├── garmin_utils.py                # Shared utilities
-├── garmin-analyzer/
-│   ├── collector.py               # Data collector
-│   ├── data/
-│   │   ├── garmin_report.md       # Analysis report
-│   │   └── garmin_report.json     # Raw data
-│   ├── TRAINING_GUIDELINES.md     # Training rules
-│   └── RESEARCH_TRAINING_PRINCIPLES.md
-└── garmin-workout-uploader/
-    ├── garmin_workout_uploader.py # Main uploader
-    ├── workouts.json              # Training plan
-    └── .venv/                     # Virtual environment
+garmin.py (CLI)
+       │
+       ├──► collect ──► garmin-analyzer/collector.py ──► garmin-analyzer/data/garmin_report.json
+       │                       │
+       │                       └──► garmin_report.md
+       │
+       ├──► plan ──► garmin-analyzer/plan_generator.py ──► garmin-workout-uploader/workouts.json
+       │
+       └──► upload ──► garmin-workout-uploader/garmin_workout_uploader.py ──► Garmin Connect
 ```
+
+---
+
+## Key Implementation Details
+
+### HR Zones (Data-Driven)
+
+Zones are calculated from actual running HR data percentiles, NOT generic formulas:
+
+- **Z1 (Recovery)**: < 25th percentile - 5
+- **Z2 (Easy)**: 25th percentile ± 5 (conversational)
+- **Z3 (Tempo)**: 25th+6 to 75th percentile
+- **Z4 (Threshold)**: 75th+1 to max-20
+- **Z5 (Max)**: > max-20
+
+### Race Predictions
+
+Uses **Riegel formula**: `T2 = T1 × (D2/D1)^1.06`
+
+- Takes median of best 3 runs (>=5km)
+- More realistic than Garmin's optimistic predictions
+
+### Training Plan
+
+- 80/20 polarized structure (easy/hard)
+- Deload weeks every 4th week
+- Progressive overload
+- Build → Peak → Taper phases
+- Uses .env pace targets
+
+### Token Management
+
+Tokens saved to: `garmin_tokens.json` (root + uploader dir)
+
+- Find via: `garmin_utils.find_token_file()`
+- Load via: `garmin_utils.get_authenticated_client(token_file)`
+- Auto-refresh on 401 errors
+
+### API Rate Limits
+
+- `REQUEST_DELAY_MIN = 1.0s`
+- `REQUEST_DELAY_MAX = 2.0s`
+- Retry with exponential backoff on 429 errors
+
+---
+
+## Workout Format (workouts.json)
+
+```json
+[
+  {
+    "name": "Easy Run 1",
+    "date": "2026-04-13",
+    "description": "Easy pace 6:00/km - building aerobic base",
+    "duration": 2400,
+    "steps": [
+      ["warmup", 600, null],
+      ["run", 1800, null],
+      ["cooldown", 300, null]
+    ]
+  }
+]
+```
+
+Step types: `warmup`, `cooldown`, `run`, `interval`, `recovery`
+
+---
+
+## For LLM Code Generation
+
+When extending this codebase:
+
+1. **Data source**: `garmin-analyzer/data/garmin_report.json` - contains all raw data
+2. **Token handling**: Use `garmin_utils.find_token_file()` → `get_authenticated_client()`
+3. **Auth refresh**: Check for "401" or "Unauthorized" in errors, re-run auth
+4. **HR zones**: Always use percentile-based from actual data, not 220-age
+5. **Predictions**: Use Riegel formula with median of best 3 runs
+6. **Rate limits**: Always add delays between API calls
+
+---
 
 ## Requirements
 
-- Python 3.10+ (see `.python-version`)
-- Chrome/Chromium (for browser authentication)
-- Virtual environment (included in repo)
+- Python 3.10+
+- Playwright (`pip install playwright`, `playwright install chromium`)
+- garminconnect library
 
-Install dependencies:
 ```bash
-cd garmin-workout-uploader
-pip install -r requirements.txt
+pip install garminconnect requests-oauthlib playwright
 playwright install chromium
+```
+
+---
+
+## File Structure
+
+```
+garmin/
+├── .env                              # Configuration
+├── garmin.py                         # Main CLI (all commands)
+├── garmin_auth.py                    # Browser authentication
+├── garmin_utils.py                   # Shared utilities
+├── garmin_tokens.json                # Auth tokens
+├── garmin-analyzer/
+│   ├── collector.py                  # Data collection
+│   ├── plan_generator.py             # Plan generation
+│   └── data/
+│       ├── garmin_report.json         # Raw data
+│       └── garmin_report.md          # Human report
+└── garmin-workout-uploader/
+    ├── garmin_workout_uploader.py    # Upload/schedule
+    └── workouts.json                 # Current plan
 ```

@@ -30,19 +30,28 @@ OUTPUT_DIR = Path(__file__).parent / "data"
 REPORT_FILE = OUTPUT_DIR / "garmin_report.json"
 
 
+def format_duration(seconds: float) -> str:
+    """Format seconds to hh:mm:ss or mm:ss depending on duration."""
+    total_sec = int(seconds)
+    if total_sec >= 3600:
+        return f"{total_sec//3600}:{(total_sec%3600)//60:02d}:{total_sec%60:02d}"
+    return f"{total_sec//60}:{total_sec%60:02d}"
+
+
 def load_user_preferences():
     """Load user training preferences from .env file."""
     return load_env_file()
 
 
 def get_client():
-    """Get authenticated Garmin client."""
+    """Get authenticated Garmin client with auto-refresh."""
     token_file = find_token_file()
     if not token_file:
-        raise Exception("Not authenticated. Run garmin_auth_browser.py first.")
+        raise Exception("Not authenticated. Run: python3 garmin.py auth")
     
     log.info(f"Using tokens from: {token_file}")
-    return get_authenticated_client(token_file)
+    client = get_authenticated_client(token_file)
+    return client
 
 
 def collect_all_data(client, days=90):
@@ -388,10 +397,10 @@ def generate_report(data, user_prefs=None):
     report.append("")
     races = data.get("race_predictions", {})
     if races:
-        report.append(f"- **5K:** {races.get('raceTime5K', 0)//60}:{races.get('raceTime5K', 0)%60:02d}")
-        report.append(f"- **10K:** {races.get('raceTime10K', 0)//60}:{races.get('raceTime10K', 0)%60:02d}")
-        report.append(f"- **Half Marathon:** {races.get('raceTimeHalf', 0)//60}:{races.get('raceTimeHalf', 0)%60:02d}")
-        report.append(f"- **Marathon:** {races.get('raceTimeMarathon', 0)//60}:{races.get('raceTimeMarathon', 0)%60:02d}")
+        report.append(f"- **5K:** {format_duration(races.get('raceTime5K', 0))}")
+        report.append(f"- **10K:** {format_duration(races.get('raceTime10K', 0))}")
+        report.append(f"- **Half Marathon:** {format_duration(races.get('raceTimeHalf', 0))}")
+        report.append(f"- **Marathon:** {format_duration(races.get('raceTimeMarathon', 0))}")
     else:
         report.append("No race predictions available.")
     report.append("")
