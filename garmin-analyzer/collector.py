@@ -20,6 +20,41 @@ from garmin_utils import (
     REQUEST_DELAY_MIN,
 )
 
+# Local race predictions (fallback when Garmin API fails)
+def calculate_local_predictions(running_activities: list) -> dict:
+    """Calculate race predictions from activity data using Riegel formula."""
+    if not running_activities:
+        return {}
+    
+    results = []
+    for a in running_activities:
+        pace = a.get("avg_pace", 0)
+        distance = a.get("distance_m", 0) / 1000
+        if pace > 0 and distance >= 5:
+            sec_km = 1000 / pace
+            results.append({"pace": sec_km, "distance": distance})
+    
+    if not results:
+        return {}
+    
+    # Use median of best 3 runs
+    results.sort(key=lambda x: x["pace"])
+    best_3 = results[:3]
+    median_pace = sorted([r["pace"] for r in best_3])[1]
+    
+    # Riegel: T2 = T1 * (D2/D1)^1.06
+    # Use 10K as baseline
+    baseline_dist = 10
+    baseline_time = median_pace * baseline_dist
+    
+    race_distances = {"5K": 5, "10K": 10, "Half": 21.1, "Marathon": 42.2}
+    predictions = {}
+    for race, dist in race_distances.items():
+        time_sec = baseline_time * (dist / baseline_dist) ** 1.06
+        predictions[race] = int(time_sec)
+    
+    return predictions
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(levelname)s: %(message)s"
@@ -86,24 +121,22 @@ def collect_all_data(client, days=90):
     log.info("Fetching profile...")
     try:
         profile = client.get_user_profile()
+        user_data = profile.get("userData", {})
         data["profile"] = {
-            "display_name": profile.get("displayName"),
-            "full_name": profile.get("fullName"),
-            "gender": profile.get("gender"),
-            "birth_date": profile.get("dateOfBirth"),
+            "gender": user_data.get("gender"),
+            "birth_date": user_data.get("birthDate"),
+            "weight": user_data.get("weight"),  # grams
+            "height": user_data.get("height"),  # cm
         }
+        # Also get display name separately
+        try:
+            full_name = client.get_full_name()
+            if full_name:
+                data["profile"]["display_name"] = full_name
+        except:
+            pass
     except Exception as e:
         log.warning(f"Profile fetch failed: {e}")
-    
-    time.sleep(REQUEST_DELAY_MIN)
-    
-    # Get full name
-    try:
-        full_name = client.get_full_name()
-        if full_name:
-            data["profile"]["display_name"] = full_name
-    except Exception as e:
-        log.warning(f"Full name fetch failed: {e}")
     
     # Body composition (weight)
     log.info("Fetching body composition...")
@@ -254,17 +287,16 @@ def generate_report(data, user_prefs=None):
     report.append(f"**Period:** {data['period']['days']} days")
     report.append("")
     
-    # Profile
+    # Profile - no personal data (name, weight, etc.) for privacy
     report.append("## Profile")
     report.append("")
     p = data.get("profile", {})
-    report.append(f"- **Name:** {p.get('display_name', 'N/A')}")
-    report.append(f"- **Gender:** {p.get('gender', 'N/A')}")
+    if p.get("gender"):
+        report.append(f"- **Gender:** {p.get('gender')}")
     if p.get("birth_date"):
         birth = datetime.fromisoformat(p.get("birth_date").replace("Z", "+00:00"))
         age = (datetime.now() - birth.replace(tzinfo=None)).days // 365
         report.append(f"- **Age:** {age} years")
-    report.append(f"- **Weight:** {p.get('weight', 'N/A')} kg")
     
     # Get VO2 Max from metrics if available
     vo2max = data.get("metrics", {}).get("vo2max")
@@ -396,13 +428,29 @@ def generate_report(data, user_prefs=None):
     report.append("## Race Predictions")
     report.append("")
     races = data.get("race_predictions", {})
-    if races:
+    
+    # Try Garmin predictions first, fall back to our local predictions
+    has_garmin_predictions = races and any(races.get(k) for k in ['raceTime5K', 'raceTime10K', 'raceTimeHalf', 'raceTimeMarathon'])
+    
+    if has_garmin_predictions:
+        report.append("### Garmin Predictions")
         report.append(f"- **5K:** {format_duration(races.get('raceTime5K', 0))}")
         report.append(f"- **10K:** {format_duration(races.get('raceTime10K', 0))}")
         report.append(f"- **Half Marathon:** {format_duration(races.get('raceTimeHalf', 0))}")
         report.append(f"- **Marathon:** {format_duration(races.get('raceTimeMarathon', 0))}")
     else:
-        report.append("No race predictions available.")
+        # Calculate our own predictions from activities
+        activities = data.get("activities", [])
+        running = [a for a in activities if a.get("type") == "running" and a.get("avg_pace")]
+        
+        if running:
+            local_predictions = calculate_local_predictions(running)
+            if local_predictions:
+                report.append("### Calculated (Riegel formula)")
+                for race, time_sec in local_predictions.items():
+                    report.append(f"- **{race}:** {format_duration(time_sec)}")
+        else:
+            report.append("No race predictions available.")
     report.append("")
     
     # HRV

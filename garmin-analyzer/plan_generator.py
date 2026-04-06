@@ -23,8 +23,40 @@ def calculate_training_weeks(goal_date: str) -> int:
     return max(1, (goal - today).days // 7)
 
 
+def calculate_hr_zones(profile: dict) -> dict:
+    """Calculate HR zones based on profile data."""
+    if not profile or not profile.get("birth_date"):
+        return {}
+    
+    try:
+        birth = datetime.fromisoformat(profile["birth_date"].replace("Z", "+00:00"))
+        age = (datetime.now() - birth.replace(tzinfo=None)).days // 365
+    except:
+        return {}
+    
+    # Tanaka formula: 208 - 0.7 * age
+    max_hr = int(208 - 0.7 * age)
+    
+    zones = {
+        "max_hr": max_hr,
+        "z1": (max_hr * 0.50, max_hr * 0.60),
+        "z2": (max_hr * 0.60, max_hr * 0.70),
+        "z3": (max_hr * 0.70, max_hr * 0.80),
+        "z4": (max_hr * 0.80, max_hr * 0.90),
+        "z5": (max_hr * 0.90, max_hr * 1.00),
+    }
+    log.info(f"Calculated HR zones based on age {age} (max HR: {max_hr})")
+    return zones
+
+
 def generate_plan(garmin_data: dict, prefs: dict) -> list[dict]:
     """Generate a training plan based on Garmin data and preferences."""
+    
+    # Get profile data
+    profile = garmin_data.get("profile", {})
+    hr_zones = calculate_hr_zones(profile)
+    
+    weight_kg = profile.get("weight") / 1000 if profile.get("weight") else None  # weight is in grams
     
     race_type = prefs.get("GOAL_RACE", "10K")
     goal_date = prefs.get("GOAL_DATE", "")
@@ -193,8 +225,7 @@ def main():
     sys.path.insert(0, str(Path(__file__).parent.parent))
     
     from garmin_utils import load_env_file, find_token_file, get_authenticated_client
-    
-    from garmin_analyzer.collector import collect_all_data
+    from collector import collect_all_data
     
     log.info("Auto Training Plan Generator")
     log.info("=" * 40)

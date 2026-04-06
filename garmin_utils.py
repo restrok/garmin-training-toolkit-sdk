@@ -21,13 +21,12 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 TOKEN_LOCATIONS = [
-    Path(__file__).parent / "garmin_tokens.json",
-    Path(__file__).parent / "garmin-workout-uploader" / "garmin_tokens.json",
     Path(__file__).parent.parent / "garmin_tokens.json",
+    Path(__file__).parent.parent / "garmin-workout-uploader" / "garmin_tokens.json",
     Path.home() / ".garminconnect" / "garmin_tokens.json",
 ]
 
-ENV_FILE = Path(__file__).parent.parent / ".env"
+ENV_FILE = Path(__file__).parent / ".env"
 
 RATE_LIMIT_DELAY = 10
 MAX_RETRIES = 5
@@ -89,12 +88,20 @@ def find_token_file() -> Optional[Path]:
 
 
 def load_env_file(env_path: Optional[Path] = None) -> dict:
-    """Load credentials from .env file. Decodes base64 credentials if present."""
+    """Load credentials from .env file. Searches root and subdirectories."""
     if env_path is None:
-        env_path = ENV_FILE
+        # Search in multiple locations
+        search_paths = [
+            Path(__file__).parent / ".env",
+            Path(__file__).parent / "garmin-workout-uploader" / ".env",
+        ]
+        for path in search_paths:
+            if path.exists():
+                env_path = path
+                break
     
     prefs = {}
-    if env_path.exists():
+    if env_path and env_path.exists():
         with open(env_path) as f:
             for line in f:
                 line = line.strip()
