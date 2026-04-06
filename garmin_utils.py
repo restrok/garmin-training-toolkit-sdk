@@ -8,6 +8,9 @@ import base64
 import json
 import logging
 import os
+import random
+import time
+from functools import wraps
 from pathlib import Path
 from typing import Optional
 
@@ -20,15 +23,61 @@ log = logging.getLogger(__name__)
 TOKEN_LOCATIONS = [
     Path(__file__).parent / "garmin_tokens.json",
     Path(__file__).parent / "garmin-workout-uploader" / "garmin_tokens.json",
+    Path(__file__).parent.parent / "garmin_tokens.json",
     Path.home() / ".garminconnect" / "garmin_tokens.json",
 ]
 
-ENV_FILE = Path(__file__).parent / ".env"
+ENV_FILE = Path(__file__).parent.parent / ".env"
 
 RATE_LIMIT_DELAY = 10
 MAX_RETRIES = 5
 REQUEST_DELAY_MIN = 1.0
 REQUEST_DELAY_MAX = 2.0
+
+
+def retry_with_backoff(max_retries: int = MAX_RETRIES, initial_delay: float = 1.0, backoff_factor: float = 2.0):
+    """Decorator for retrying functions with exponential backoff."""
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            last_exception = None
+            for attempt in range(max_retries):
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    last_exception = e
+                    error_msg = str(e).lower()
+                    
+                    delay = initial_delay * (backoff_factor ** attempt)
+                    
+                    if "429" in error_msg or "rate limit" in error_msg:
+                        delay = min(delay + random.uniform(0, 10), 300)
+                        log.warning(f"Rate limited. Retrying in {delay:.0f}s (attempt {attempt + 1}/{max_retries})")
+                    elif "portal" in error_msg or "cloudflare" in error_msg:
+                        delay = min(delay + random.uniform(0, 15), 120)
+                        log.warning(f"Cloudflare blocking. Retrying in {delay:.0f}s (attempt {attempt + 1}/{max_retries})")
+                    elif "timeout" in error_msg or "connection" in error_msg:
+                        delay = min(delay, 60)
+                        log.warning(f"Connection error. Retrying in {delay:.0f}s (attempt {attempt + 1}/{max_retries})")
+                    else:
+                        if attempt < max_retries - 1:
+                            log.warning(f"Error: {e}. Retrying in {delay:.0f}s (attempt {attempt + 1}/{max_retries})")
+                        else:
+                            raise
+                    
+                    time.sleep(delay)
+            
+            raise last_exception
+        return wrapper
+    return decorator
+
+
+def safe_api_call(func, *args, **kwargs):
+    """Make an API call with retry and error handling."""
+    @retry_with_backoff()
+    def _call():
+        return func(*args, **kwargs)
+    return _call()
 
 
 def find_token_file() -> Optional[Path]:
@@ -88,7 +137,7 @@ def save_tokens(tokens: dict, locations: Optional[list] = None):
     if locations is None:
         locations = [
             Path(__file__).parent / "garmin_tokens.json",
-            Path(__file__).parent / "garmin-workout-uploader" / "garmin_tokens.json",
+            Path(__file__).parent.parent / "garmin_tokens.json",
             Path.home() / ".garminconnect" / "garmin_tokens.json",
         ]
     

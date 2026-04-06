@@ -15,8 +15,6 @@ import requests
 from playwright.sync_api import sync_playwright
 from requests_oauthlib import OAuth1Session
 
-sys.path.insert(0, str(Path(__file__).parent))
-
 from garmin_utils import save_tokens
 
 logging.basicConfig(

@@ -1,20 +1,39 @@
-# Environment
+# Credentials & tokens (NEVER commit these)
 .env
-.env.local
-
-# Tokens
+.env.*
+!garmin-workout-uploader/.env.example
 garmin_tokens.json
+**/garmin_tokens.json
 
-# IDE
-.idea/
-.vscode/
-*.swp
+# Personal data
+workouts.json
+**/workouts.json
+*_report.md
+garmin_report.md
+garmin-analyzer/data/*.json
+garmin-analyzer/data/*.md
 
 # Python
 __pycache__/
 *.py[cod]
-*$py.class
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
 
 # OS
 .DS_Store
 Thumbs.db
+
+# Data output (optional - uncomment to ignore)
+# garmin-analyzer/data/*.json
+# garmin-analyzer/data/*.md

@@ -1,20 +1,19 @@
 # Garmin Workout Uploader
 
-A Python tool to upload, schedule, and manage workouts on Garmin Connect using browser-based authentication.
+**Now use the main CLI instead:**
 
-**Part of the Garmin Connect Analysis System:**
-
-```
-garmin-analyzer/    → Collects data & generates report
-garmin-workout-uploader/  → Uploads training plan to Garmin
+```bash
+python3 garmin.py upload   # Upload workouts
+python3 garmin.py auth    # Re-authenticate
 ```
 
-## Full Workflow
+## Legacy Commands (still work)
 
-1. **Analyze** → Run `collector.py` in `../garmin-analyzer/` to generate a report
-2. **Plan** → Share the report with an LLM to create a training plan
-3. **Upload** → Run `garmin_workout_uploader.py` to upload workouts to Garmin
-4. **Manage** → Use `--list`, `--clean` to manage duplicates
+```bash
+python garmin_workout_uploader.py      # Upload
+python garmin_workout_uploader.py --list   # List
+python3 garmin.py auth      # Authenticate via browser
+```
 
 ## Features
 
@@ -56,21 +55,13 @@ pip install -r requirements.txt
 playwright install chromium
 ```
 
-### 4. Configure credentials
+### 4. Configure
+
+Copy the example env file and edit with your training goals:
 
 ```bash
-# Copy the example env file
 cp .env.example .env
-
-# Edit .env with your credentials
 nano .env
-```
-
-Or create `.env` manually:
-
-```env
-GARMIN_EMAIL="your@email.com"
-GARMIN_PASSWORD="your_password"
 ```
 
 ## Usage
@@ -78,7 +69,7 @@ GARMIN_PASSWORD="your_password"
 ### First time: Authenticate via browser
 
 ```bash
-python garmin_auth_browser.py
+python3 garmin.py auth
 ```
 
 This will:
@@ -175,7 +166,7 @@ WORKOUTS = [
 
 | File | Description |
 |------|-------------|
-| `garmin_auth_browser.py` | Browser-based authentication |
+| `garmin.py`          | Main CLI (unified commands) |
 | `garmin_workout_uploader.py` | Main app - upload & schedule workouts |
 | `requirements.txt` | Python dependencies |
 | `.env.example` | Template for credentials |
@@ -197,13 +188,13 @@ WORKOUTS = [
 
 If you see "Rate limited" errors:
 - Wait 1-4 hours before retrying
-- Use browser authentication: `python garmin_auth_browser.py`
+- Use browser authentication: `python3 garmin.py auth`
 
 ### Token Expired
 
 When tokens expire:
 ```bash
-python garmin_auth_browser.py
+python3 garmin.py auth
 ```
 
 ### Browser doesn't open
