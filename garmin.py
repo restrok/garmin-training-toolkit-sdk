@@ -519,15 +519,22 @@ def cmd_upload(args):
     
     try:
         client = get_authenticated_client(token_file)
-        client.login()
     except Exception as e:
         if "401" in str(e) or "Unauthorized" in str(e):
             print("Session expired. Re-authenticating...")
             subprocess.run(["python3", str(Path(__file__).parent / "garmin.py"), "auth"], check=True)
             client = get_authenticated_client(find_token_file())
-            client.login()
         else:
             raise
+    
+    # Pass args to uploader
+    sys.argv = ["garmin_workout_uploader.py"]
+    if args.clean:
+        if args.clean == "all":
+            sys.argv.append("--clean-all")
+        else:
+            sys.argv.extend(["--clean", args.clean])
+    sys.argv.append("--yes")
     
     sys.path.insert(0, str(Path(__file__).parent / "garmin-workout-uploader"))
     from garmin_workout_uploader import main as upload_main
@@ -556,9 +563,11 @@ def main():
     p_export = sub.add_parser("export", help="Export full report")
     p_export.add_argument("--file", help="Save to file")
     
+    p_upload = sub.add_parser("upload", help="Upload workouts")
+    p_upload.add_argument("--clean", nargs="?", const="all", help="Delete old workouts (use --clean-all or month prefix)")
+    p_upload.add_argument("--delete", metavar="WORKOUT_ID", help="Delete specific workout by ID")
+    
     sub.add_parser("plan", help="Generate training plan")
-    sub.add_parser("auth", help="Re-authenticate")
-    sub.add_parser("upload", help="Upload workouts")
     
     args = parser.parse_args()
     
