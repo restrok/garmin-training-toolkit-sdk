@@ -12,7 +12,7 @@ python3 garmin.py auth    # Re-authenticate
 ```bash
 python garmin_workout_uploader.py      # Upload
 python garmin_workout_uploader.py --list   # List
-python garmin_auth_browser.py               # Auth
+python3 garmin.py auth      # Authenticate via browser
 ```
 
 ## Features
@@ -69,7 +69,7 @@ nano .env
 ### First time: Authenticate via browser
 
 ```bash
-python garmin_auth_browser.py
+python3 garmin.py auth
 ```
 
 This will:
@@ -166,7 +166,7 @@ WORKOUTS = [
 
 | File | Description |
 |------|-------------|
-| `garmin_auth_browser.py` | Browser-based authentication |
+| `garmin.py`          | Main CLI (unified commands) |
 | `garmin_workout_uploader.py` | Main app - upload & schedule workouts |
 | `requirements.txt` | Python dependencies |
 | `.env.example` | Template for credentials |
@@ -188,13 +188,13 @@ WORKOUTS = [
 
 If you see "Rate limited" errors:
 - Wait 1-4 hours before retrying
-- Use browser authentication: `python garmin_auth_browser.py`
+- Use browser authentication: `python3 garmin.py auth`
 
 ### Token Expired
 
 When tokens expire:
 ```bash
-python garmin_auth_browser.py
+python3 garmin.py auth
 ```
 
 ### Browser doesn't open
