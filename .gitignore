@@ -37,3 +37,4 @@ Thumbs.db
 # Data output (optional - uncomment to ignore)
 # garmin-analyzer/data/*.json
 # garmin-analyzer/data/*.md
+garmin-workout-uploader/workouts.json

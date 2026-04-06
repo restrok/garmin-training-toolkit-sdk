@@ -564,7 +564,7 @@ def main():
     p_export.add_argument("--file", help="Save to file")
     
     p_upload = sub.add_parser("upload", help="Upload workouts")
-    p_upload.add_argument("--clean", nargs="?", const="all", help="Delete old workouts (use --clean-all or month prefix)")
+    p_upload.add_argument("--clean", nargs="?", const="all", help="Delete old workouts (use 'all' to delete everything)")
     p_upload.add_argument("--delete", metavar="WORKOUT_ID", help="Delete specific workout by ID")
     
     sub.add_parser("plan", help="Generate training plan")

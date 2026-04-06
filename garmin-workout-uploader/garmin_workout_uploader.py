@@ -152,7 +152,7 @@ def delete_workout(client, workout_id):
 
 
 def clean_old_workouts(client, month_prefix=None):
-    """Delete old workouts from previous plans (keeps newest version of each)."""
+    """Delete old workouts from previous plans (keeps newest version of each). Skips ATP (Garmin auto) plans."""
     log.info("Fetching all workouts...")
     
     try:
@@ -163,8 +163,26 @@ def clean_old_workouts(client, month_prefix=None):
     
     log.info(f"Found {len(all_workouts)} total workouts")
     
+    # Separate ATP workouts (cannot delete) from normal workouts
+    atp_workouts = [w for w in all_workouts if w.get("atpPlanId")]
+    normal_workouts = [w for w in all_workouts if not w.get("atpPlanId")]
+    
+    log.info(f"Skipping {len(atp_workouts)} ATP (Garmin auto) workouts - cannot delete via API")
+    
+    # If month_prefix is "all" or clean_all (None), delete ALL normal workouts
+    if month_prefix == "all" or month_prefix is None:
+        to_delete = [w.get("workoutId") for w in normal_workouts]
+        log.info(f"Deleting ALL {len(to_delete)} normal workouts...")
+        for i, wid in enumerate(to_delete, 1):
+            log.info(f"[{i}/{len(to_delete)}] Deleting {wid}...")
+            if delete_workout(client, wid):
+                time.sleep(0.5)
+        log.info(f"Removed {len(to_delete)} workouts!")
+        return
+    
+    # Otherwise, just clean duplicates (keep newest) by month prefix
     by_name = {}
-    for w in all_workouts:
+    for w in normal_workouts:
         name = w.get("workoutName", "")
         if month_prefix and not name.startswith(month_prefix):
             continue
@@ -175,7 +193,7 @@ def clean_old_workouts(client, month_prefix=None):
     duplicates = {name: ws for name, ws in by_name.items() if len(ws) > 1}
     
     if not duplicates:
-        log.info(f"No old workouts found for '{month_prefix or 'all'}'!")
+        log.info(f"No duplicate workouts found for '{month_prefix or 'all'}'!")
         return
     
     log.info(f"Found {len(duplicates)} old workout groups:")
