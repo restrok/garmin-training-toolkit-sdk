@@ -111,18 +111,55 @@ def calculate_hr_zones(profile: dict) -> dict:
     
     zones = {
         "max_hr": max_hr,
-        "z1": (max_hr * 0.50, max_hr * 0.60),
-        "z2": (max_hr * 0.60, max_hr * 0.70),
-        "z3": (max_hr * 0.70, max_hr * 0.80),
-        "z4": (max_hr * 0.80, max_hr * 0.90),
-        "z5": (max_hr * 0.90, max_hr * 1.00),
+        "z1": (int(max_hr * 0.50), int(max_hr * 0.60)),
+        "z2": (int(max_hr * 0.60), int(max_hr * 0.70)),
+        "z3": (int(max_hr * 0.70), int(max_hr * 0.80)),
+        "z4": (int(max_hr * 0.80), int(max_hr * 0.90)),
+        "z5": (int(max_hr * 0.90), int(max_hr * 1.00)),
     }
     log.info(f"Calculated HR zones based on age {age} (max HR: {max_hr})")
     return zones
 
 
+def create_hr_target(low: int, high: int) -> dict:
+    """Create HR target type dict for Garmin workout."""
+    return {
+        "workoutTargetTypeId": 4,  # HEART_RATE
+        "workoutTargetTypeKey": "heart.rate.zone",
+        "displayOrder": 4,
+        "zone": {"low": low, "high": high},
+        "targetValueOne": float(low),
+        "targetValueTwo": float(high)
+    }
+
+
+def create_pace_target(pace_sec: float) -> dict:
+    """Create pace/speed target type dict for Garmin workout (in m/s)."""
+    m_per_sec = 1000 / pace_sec  # Convert sec/km to m/s
+    return {
+        "workoutTargetTypeId": 5,  # SPEED
+        "workoutTargetTypeKey": "speed.zone",
+        "displayOrder": 5,
+        "zone": {"low": m_per_sec * 0.95, "high": m_per_sec * 1.05},
+        "targetValueOne": m_per_sec * 0.95,
+        "targetValueTwo": m_per_sec * 1.05
+    }
+
+
 def get_phase(week: int, total_weeks: int) -> str:
     """Determine training phase based on week number."""
+    taper_weeks = min(2, total_weeks // 4)
+    base_weeks = max(4, (total_weeks - taper_weeks) // 2)
+    build_weeks = total_weeks - base_weeks - taper_weeks
+    
+    if week <= base_weeks:
+        return "base"
+    elif week <= base_weeks + build_weeks:
+        return "build"
+    elif week <= total_weeks - taper_weeks:
+        return "peak"
+    else:
+        return "taper"
     taper_weeks = min(2, total_weeks // 4)
     base_weeks = max(4, (total_weeks - taper_weeks) // 2)
     build_weeks = total_weeks - base_weeks - taper_weeks
@@ -153,24 +190,36 @@ def get_long_run_distance(week: int, phase: str, total_weeks: int, base_long: fl
     return int(min(base_long * factor, max_long))
 
 
-def get_interval_workout(week: int, phase: str, interval_sec: int) -> dict:
+def get_interval_workout(week: int, phase: str, interval_sec: float, hr_zones: dict = None) -> dict:
     """Generate VO2max interval workout."""
     if phase == "build":
-        # Start intervals in build phase
-        interval_count = 4 + ((week - 4) // 2)  # 4, 4, 5, 5, 6, 6...
-        interval_dur = 180 + week * 30  # 3min -> 6min
-    else:  # peak
+        interval_count = 4 + ((week - 4) // 2)
+        interval_dur = 180 + week * 30
+    else:
         interval_count = 5 + (week // 2)
-        interval_dur = 360 + week * 30  # 6min -> 9min
+        interval_dur = 360 + week * 30
     
-    interval_count = min(interval_count, 8)  # Max 8 intervals
-    interval_dur = min(interval_dur, 540)  # Max 9min intervals
+    interval_count = min(interval_count, 8)
+    interval_dur = min(interval_dur, 540)
     
-    recovery_dur = interval_dur // 2  # 1:2 work:recovery ratio
+    recovery_dur = interval_dur // 2
+    
+    # Create pace target for intervals (in m/s)
+    m_per_sec = 1000 / interval_sec
+    pace_target = {
+        "workoutTargetTypeId": 5,  # SPEED
+        "workoutTargetTypeKey": "speed.zone",
+        "displayOrder": 5,
+        "zone": {"low": m_per_sec * 0.95, "high": m_per_sec * 1.05},
+        "targetValueOne": m_per_sec * 0.95,
+        "targetValueTwo": m_per_sec * 1.05
+    }
+    
+    interval_pace = f"{int(interval_sec // 60)}:{int(interval_sec % 60):02d}"
     
     steps = [["warmup", 600, None]]
     for i in range(interval_count):
-        steps.append(["run", interval_dur, None])
+        steps.append(["run", interval_dur, pace_target])
         if i < interval_count - 1:
             steps.append(["recovery", recovery_dur, None])
     steps.append(["cooldown", 300, None])
@@ -179,13 +228,13 @@ def get_interval_workout(week: int, phase: str, interval_sec: int) -> dict:
     
     return {
         "name": f"Intervals {week}",
-        "description": f"{interval_count}x{interval_dur//60}min at VO2max pace",
+        "description": f"{interval_count}x{interval_dur//60}min at VO2max pace (~{interval_pace}/km)",
         "duration": total_duration,
         "steps": steps
     }
 
 
-def get_tempo_workout(week: int, phase: str, tempo_sec: int) -> dict:
+def get_tempo_workout(week: int, phase: str, tempo_sec: int, hr_zones: dict = None) -> dict:
     """Generate threshold/tempo workout (used sparingly in build phase)."""
     tempo_dur = 900 + (week * 60)  # 15min -> 30min
     tempo_dur = min(tempo_dur, 2400)  # Max 40min
@@ -204,7 +253,7 @@ def get_tempo_workout(week: int, phase: str, tempo_sec: int) -> dict:
     }
 
 
-def get_easy_run(week: int, phase: str, is_deload: bool = False) -> dict:
+def get_easy_run(week: int, phase: str, is_deload: bool = False, hr_zones: dict = None) -> dict:
     """Generate easy Zone 2 run."""
     if is_deload:
         duration = 20 * 60
@@ -213,19 +262,25 @@ def get_easy_run(week: int, phase: str, is_deload: bool = False) -> dict:
         duration = 40 * 60
         run_dur = 1800 if phase == "base" else 2100
     
+    # HR target for Zone 2
+    hr_target = None
+    if hr_zones:
+        z2 = hr_zones.get("z2", (0, 0))
+        hr_target = create_hr_target(int(z2[0]), int(z2[1]))
+    
     return {
         "name": f"Easy Run {week}",
-        "description": "Easy Zone 2 - conversational pace",
+        "description": f"Easy Zone 2 - conversational pace (HR {int(z2[0])}-{int(z2[1])} bpm)",
         "duration": duration,
         "steps": [
             ["warmup", 600, None],
-            ["run", run_dur, None],
+            ["run", run_dur, hr_target],
             ["cooldown", 300, None],
         ]
     }
 
 
-def get_long_run(week: int, phase: str, total_weeks: int, is_deload: bool = False) -> dict:
+def get_long_run(week: int, phase: str, total_weeks: int, is_deload: bool = False, hr_zones: dict = None) -> dict:
     """Generate long run at Zone 2."""
     if is_deload:
         long_dist = 1500
@@ -235,15 +290,21 @@ def get_long_run(week: int, phase: str, total_weeks: int, is_deload: bool = Fals
     warmup = 900 if long_dist > 3000 else 600
     cooldown = 300
     
+    # HR target for Zone 2
+    hr_target = None
+    if hr_zones:
+        z2 = hr_zones.get("z2", (0, 0))
+        hr_target = create_hr_target(int(z2[0]), int(z2[1]))
+    
     duration = warmup + long_dist + cooldown
     
     return {
         "name": f"Long Run {week}",
-        "description": f"Long run {long_dist/1000:.1f}km at Zone 2 pace",
+        "description": f"Long run {long_dist/1000:.1f}km at Zone 2 pace (HR {int(z2[0])}-{int(z2[1])} bpm)",
         "duration": duration,
         "steps": [
             ["warmup", warmup, None],
-            ["run", long_dist, None],
+            ["run", long_dist, hr_target],
             ["cooldown", cooldown, None],
         ]
     }
@@ -256,7 +317,35 @@ def generate_plan(garmin_data: dict, prefs: dict) -> tuple[list[dict], dict]:
     """
     
     profile = garmin_data.get("profile", {})
-    hr_zones = calculate_hr_zones(profile)
+    activities = garmin_data.get("activities", [])
+    running = [a for a in activities if a.get("type") == "running"]
+    
+    # Calculate data-driven HR zones from actual activity data
+    hr_zones = calculate_hr_zones(profile)  # Fallback to age-based
+    
+    # Override with data-driven zones if we have enough data
+    hr_values = [a.get("avg_hr", 0) for a in running if a.get("avg_hr")]
+    max_hr_values = [a.get("max_hr", 0) for a in running if a.get("max_hr")]
+    
+    if len(hr_values) >= 5 and max_hr_values:
+        hr_sorted = sorted(hr_values)
+        n = len(hr_sorted)
+        p25 = hr_sorted[n // 4]
+        p75 = hr_sorted[3 * n // 4]
+        max_hr = max(max_hr_values)
+        
+        # Use percentile-based zones similar to garmin.py
+        hr_zones = {
+            "max_hr": max_hr,
+            "z1": (0, int(p25 - 5)),
+            "z2": (int(p25 - 5), int(p25 + 5)),
+            "z3": (int(p25 + 6), int(p75)),
+            "z4": (int(p75 + 1), int(max_hr - 20)),
+            "z5": (int(max_hr - 19), max_hr),
+        }
+        log.info(f"Using data-driven HR zones: Z1<{hr_zones['z1'][1]}, Z2={hr_zones['z2'][0]}-{hr_zones['z2'][1]}, Z3={hr_zones['z3'][0]}-{hr_zones['z3'][1]}, Z4={hr_zones['z4'][0]}-{hr_zones['z4'][1]}")
+    else:
+        log.info(f"Using age-based HR zones: {hr_zones}")
     
     race_type = prefs.get("GOAL_RACE", "10K")
     goal_date = prefs.get("GOAL_DATE", "")
@@ -322,7 +411,7 @@ def generate_plan(garmin_data: dict, prefs: dict) -> tuple[list[dict], dict]:
         
         # Day 1: Easy run (Monday)
         day1 = start_date + timedelta(weeks=week-1, days=0)
-        easy1 = get_easy_run(week, phase, is_deload)
+        easy1 = get_easy_run(week, phase, is_deload, hr_zones)
         easy1["date"] = day1.strftime("%Y-%m-%d")
         workouts.append(easy1)
         
@@ -335,15 +424,15 @@ def generate_plan(garmin_data: dict, prefs: dict) -> tuple[list[dict], dict]:
         if phase == "base" or is_deload:
             # Base phase: add 3rd easy workout if training_days >= 3
             if training_days >= 3 and not is_deload and phase == "base":
-                day2_easy = get_easy_run(week, phase, is_deload=False)
+                day2_easy = get_easy_run(week, phase, is_deload=False, hr_zones=hr_zones)
                 day2_easy["date"] = day2.strftime("%Y-%m-%d")
                 workouts.append(day2_easy)
             hard_workout = None
         elif phase == "build":
             # VO2max intervals - 20% of training
-            hard_workout = get_interval_workout(week, phase, interval_sec)
+            hard_workout = get_interval_workout(week, phase, interval_sec, hr_zones)
         else:  # peak/taper
-            hard_workout = get_interval_workout(week, phase, interval_sec)
+            hard_workout = get_interval_workout(week, phase, interval_sec, hr_zones)
         
         if hard_workout and training_days >= 2:
             hard_workout["date"] = day2.strftime("%Y-%m-%d")
@@ -351,14 +440,14 @@ def generate_plan(garmin_data: dict, prefs: dict) -> tuple[list[dict], dict]:
         
         # Day 3: Long run (Friday for recovery before weekend)
         day3 = start_date + timedelta(weeks=week-1, days=4)
-        long_run = get_long_run(week, phase, weeks, is_deload)
+        long_run = get_long_run(week, phase, weeks, is_deload, hr_zones)
         long_run["date"] = day3.strftime("%Y-%m-%d")
         workouts.append(long_run)
         
         # Optional 4th day: Easy run (Sunday) - if 4+ days requested
         if training_days >= 4 and not is_deload:
             day4 = start_date + timedelta(weeks=week-1, days=6)
-            easy4 = get_easy_run(week, phase, is_deload=False)
+            easy4 = get_easy_run(week, phase, is_deload=False, hr_zones=hr_zones)
             easy4["date"] = day4.strftime("%Y-%m-%d")
             workouts.append(easy4)
     

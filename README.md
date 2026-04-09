@@ -19,8 +19,8 @@ python3 garmin.py predict      # Race time predictions
 python3 garmin.py best          # Best times
 
 # 4. Generate & Upload Plan
-python3 garmin.py plan    # Create training plan
-python3 garmin.py upload  # Upload to Garmin Connect
+python3 garmin.py plan              # Create training plan
+python3 garmin.py upload --clean-all # Upload to Garmin Connect (cleans old workouts first)
 ```
 
 ---
@@ -39,7 +39,7 @@ python3 garmin.py upload  # Upload to Garmin Connect
 | `compare` | Plan vs training | |
 | `export` | Full report | `--file output.md` |
 | `plan` | Generate plan | |
-| `upload` | Upload workouts | |
+| `upload` | Upload workouts | `--clean-all`, `--delete ID`, `--file FILE` |
 
 ---
 
@@ -81,6 +81,22 @@ garmin.py (CLI)
 
 ## Key Implementation Details
 
+### Activity Data (garmin_report.json)
+
+**Important:** The `avg_pace` field is in **meters per second (m/s)**, not min/km!
+
+To convert to min/km:
+```python
+# Example: avg_pace = 2.075 m/s
+min_per_km = 1000 / 2.075  # = 481.9 seconds = 8:02/km
+
+# Or in code:
+pace_sec = int(1000 / avg_pace)
+mins = pace_sec // 60
+secs = pace_sec % 60
+formatted = f"{mins}:{secs:02d}"  # "8:02"
+```
+
 ### HR Zones (Data-Driven)
 
 Zones are calculated from actual running HR data percentiles, NOT generic formulas:
@@ -105,6 +121,19 @@ Uses **Riegel formula**: `T2 = T1 × (D2/D1)^1.06`
 - Progressive overload
 - Build → Peak → Taper phases
 - Uses .env pace targets
+- **HR targets** automatically added to easy/long runs (Zone 2)
+- **Pace targets** automatically added to intervals
+
+### Workout Targets
+
+When generating a plan, target types are added to workout steps:
+- **Easy/Long runs:** HR target (Zone 2) - shows on Garmin watch
+- **Intervals:** Pace target (m/s) - shows on Garmin watch
+
+Example step with target:
+```json
+["run", 1800, {"workoutTargetTypeId": 4, "zone": {"low": 153, "high": 163}}]
+```
 
 ### Token Management
 
@@ -129,11 +158,11 @@ Tokens saved to: `garmin_tokens.json` (root + uploader dir)
   {
     "name": "Easy Run 1",
     "date": "2026-04-13",
-    "description": "Easy pace 6:00/km - building aerobic base",
+    "description": "Easy Zone 2 - conversational pace (HR 153-163 bpm)",
     "duration": 2400,
     "steps": [
       ["warmup", 600, null],
-      ["run", 1800, null],
+      ["run", 1800, {"workoutTargetTypeId": 4, "zone": {"low": 153, "high": 163}}],
       ["cooldown", 300, null]
     ]
   }
@@ -141,6 +170,12 @@ Tokens saved to: `garmin_tokens.json` (root + uploader dir)
 ```
 
 Step types: `warmup`, `cooldown`, `run`, `interval`, `recovery`
+
+Third element in step: target type dict (null = no target)
+
+Target types:
+- **HR target:** `workoutTargetTypeId: 4` with `zone: {low, high}`
+- **Pace target:** `workoutTargetTypeId: 5` with `zone: {low, high}` (in m/s)
 
 ---
 
@@ -154,6 +189,8 @@ When extending this codebase:
 4. **HR zones**: Always use percentile-based from actual data, not 220-age
 5. **Predictions**: Use Riegel formula with median of best 3 runs
 6. **Rate limits**: Always add delays between API calls
+7. **Workout targets**: Add HR targets (typeId: 4) to easy runs, pace targets (typeId: 5) to intervals
+8. **Library version**: Use garminconnect==0.2.40 (not 0.3.x) for workout creation to work with pydantic
 
 ---
 
@@ -161,12 +198,25 @@ When extending this codebase:
 
 - Python 3.10+
 - Playwright (`pip install playwright`, `playwright install chromium`)
-- garminconnect library
+- **garminconnect==0.2.40** (IMPORTANT: 0.3.x has pydantic v2 compatibility issues with workout creation)
 
 ```bash
-pip install garminconnect requests-oauthlib playwright
+# Install with correct versions
+pip install garminconnect==0.2.40 requests-oauthlib playwright
+pip install garth  # required by garminconnect 0.2.40
 playwright install chromium
 ```
+
+### Activity Splits
+
+The collector fetches lap/split data for recent activities (last 5). Each split includes:
+- Distance, duration, moving time
+- Average HR, max HR
+- Average pace (m/s)
+- Cadence, calories
+
+This allows per-lap analysis of workouts (warmup vs run vs cooldown).
+
 
 ---
 

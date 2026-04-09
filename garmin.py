@@ -529,7 +529,11 @@ def cmd_upload(args):
     
     # Pass args to uploader
     sys.argv = ["garmin_workout_uploader.py"]
-    if args.clean:
+    if args.file:
+        sys.argv.extend(["--file", args.file])
+    if args.clean_all:
+        sys.argv.append("--clean-all")
+    elif args.clean:
         if args.clean == "all":
             sys.argv.append("--clean-all")
         else:
@@ -565,6 +569,7 @@ def main():
     
     p_upload = sub.add_parser("upload", help="Upload workouts")
     p_upload.add_argument("--clean", nargs="?", const="all", help="Delete old workouts (use 'all' to delete everything)")
+    p_upload.add_argument("--clean-all", action="store_true", help="Delete ALL old workouts before uploading")
     p_upload.add_argument("--delete", metavar="WORKOUT_ID", help="Delete specific workout by ID")
     
     sub.add_parser("plan", help="Generate training plan")
