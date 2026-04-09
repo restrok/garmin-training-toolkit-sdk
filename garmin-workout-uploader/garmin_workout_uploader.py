@@ -15,6 +15,7 @@ from garminconnect import Garmin
 from garminconnect.workout import (
     RunningWorkout,
     WorkoutSegment,
+    ExecutableStep,
     create_cooldown_step,
     create_interval_step,
     create_recovery_step,
@@ -41,6 +42,19 @@ log = logging.getLogger(__name__)
 WORKOUTS_FILE = Path(__file__).parent / "workouts.json"
 
 
+def get_client():
+    """Get authenticated Garmin client."""
+    token_path = find_token_file()
+    
+    if not token_path:
+        log.error("No tokens found. Run: python3 garmin.py auth")
+        import sys
+        sys.exit(1)
+    
+    log.info(f"Using saved tokens from: {token_path}")
+    return get_authenticated_client(token_path)
+
+
 def load_workouts():
     """Load and validate workouts from JSON file."""
     if not WORKOUTS_FILE.exists():
@@ -63,42 +77,47 @@ def load_workouts():
 WORKOUTS = load_workouts()
 
 
-def login_with_retry(client, max_retries=5, initial_delay=10):
-    """Try to login with exponential backoff and jitter."""
-    for attempt in range(max_retries):
-        try:
-            log.info(f"Attempt {attempt + 1}/{max_retries}...")
-            client.login()
-            return True
-        except Exception as e:
-            error_msg = str(e)
-            log.warning(f"Login failed: {error_msg[:100]}")
-            
-            if "429" in error_msg or "rate limit" in error_msg.lower():
-                delay = min(initial_delay * (2 ** attempt) + random.uniform(0, 5), 300)
-                log.info(f"Rate limited! Waiting {delay:.0f} seconds...")
-                time.sleep(delay)
-            elif "portal" in error_msg.lower() or "cloudflare" in error_msg.lower():
-                delay = initial_delay + random.uniform(0, 10)
-                log.info(f"Cloudflare blocking. Waiting {delay:.0f} seconds...")
-                time.sleep(delay)
-            else:
-                return False
+def create_step_with_target(step_type: str, duration: float, order: int, target_type: dict = None) -> ExecutableStep:
+    """Create a step with target values at step level (not inside targetType)."""
+    step_type_map = {
+        "warmup": {"stepTypeId": 1, "stepTypeKey": "warmup", "displayOrder": 1},
+        "cooldown": {"stepTypeId": 2, "stepTypeKey": "cooldown", "displayOrder": 2},
+        "run": {"stepTypeId": 3, "stepTypeKey": "interval", "displayOrder": 3},
+        "interval": {"stepTypeId": 3, "stepTypeKey": "interval", "displayOrder": 3},
+        "recovery": {"stepTypeId": 3, "stepTypeKey": "interval", "displayOrder": 3},
+    }
     
-    return False
-
-
-def get_client():
-    """Get authenticated Garmin client."""
-    token_path = find_token_file()
+    if target_type:
+        workout_target_type_id = target_type.get("workoutTargetTypeId", 1)
+        workout_target_type_key = target_type.get("workoutTargetTypeKey", "no.target")
+        display_order = target_type.get("displayOrder", 1)
+        target_value_one = target_type.get("targetValueOne")
+        target_value_two = target_type.get("targetValueTwo")
+    else:
+        workout_target_type_id = 1
+        workout_target_type_key = "no.target"
+        display_order = 1
+        target_value_one = None
+        target_value_two = None
     
-    if not token_path:
-        log.error("No tokens found. Run: python3 garmin.py auth")
-        import sys
-        sys.exit(1)
-    
-    log.info(f"Using saved tokens from: {token_path}")
-    return get_authenticated_client(token_path)
+    return ExecutableStep(
+        stepOrder=order,
+        stepType=step_type_map.get(step_type, step_type_map["run"]),
+        endCondition={
+            "conditionTypeId": 2,
+            "conditionTypeKey": "time",
+            "displayOrder": 2,
+            "displayable": True,
+        },
+        endConditionValue=duration,
+        targetType={
+            "workoutTargetTypeId": workout_target_type_id,
+            "workoutTargetTypeKey": workout_target_type_key,
+            "displayOrder": display_order,
+        },
+        targetValueOne=target_value_one,
+        targetValueTwo=target_value_two,
+    )
 
 
 def create_workout(workout_data):
@@ -109,7 +128,7 @@ def create_workout(workout_data):
     for step_data in workout_data["steps"]:
         step_type = step_data[0]
         duration = step_data[1]
-        recovery = step_data[2] if len(step_data) > 2 else None
+        target_type = step_data[2] if len(step_data) > 2 else None
         
         if step_type == "warmup":
             steps.append(create_warmup_step(float(duration), order))
@@ -118,14 +137,17 @@ def create_workout(workout_data):
             steps.append(create_cooldown_step(float(duration), order))
             order += 1
         elif step_type == "run":
-            steps.append(create_interval_step(float(duration), order))
+            steps.append(create_step_with_target(step_type, float(duration), order, target_type))
             order += 1
         elif step_type == "interval":
-            steps.append(create_interval_step(float(duration), order))
+            steps.append(create_step_with_target(step_type, float(duration), order, target_type))
             order += 1
-            if recovery and recovery > 0:
-                steps.append(create_recovery_step(float(recovery), order))
+            if duration > 0:
+                steps.append(create_recovery_step(float(duration) // 2, order))
                 order += 1
+        elif step_type == "recovery":
+            steps.append(create_recovery_step(float(duration), order))
+            order += 1
     
     return RunningWorkout(
         workoutName=workout_data["name"],

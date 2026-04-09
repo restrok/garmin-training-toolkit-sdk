@@ -73,6 +73,41 @@ def format_duration(seconds: float) -> str:
     return f"{total_sec//60}:{total_sec%60:02d}"
 
 
+def format_pace(m_per_sec: float) -> str:
+    """Format pace from m/s to min:sec/km."""
+    if m_per_sec <= 0:
+        return "--:--"
+    sec_per_km = int(1000 / m_per_sec)
+    mins = sec_per_km // 60
+    secs = sec_per_km % 60
+    return f"{mins}:{secs:02d}"
+
+
+def get_activity_splits(client, activity_id: int) -> list:
+    """Fetch detailed splits for an activity."""
+    try:
+        splits = client.get_activity_splits(activity_id)
+        if splits and "lapDTOs" in splits:
+            laps = []
+            for lap in splits["lapDTOs"]:
+                laps.append({
+                    "index": lap.get("lapIndex"),
+                    "type": lap.get("intensityType"),
+                    "distance_m": lap.get("distance"),
+                    "duration_sec": lap.get("duration"),
+                    "moving_duration_sec": lap.get("movingDuration"),
+                    "avg_hr": lap.get("averageHR"),
+                    "max_hr": lap.get("maxHR"),
+                    "avg_pace_mps": lap.get("averageMovingSpeed"),  # m/s
+                    "avg_cadence": lap.get("averageRunCadence"),
+                    "calories": lap.get("calories"),
+                })
+            return laps
+    except Exception as e:
+        log.warning(f"Failed to get splits for {activity_id}: {e}")
+    return []
+
+
 def load_user_preferences():
     """Load user training preferences from .env file."""
     return load_env_file()
@@ -163,7 +198,7 @@ def collect_all_data(client, days=90):
             if activity_date and activity_date[:10] < start_date.strftime("%Y-%m-%d"):
                 continue
             
-            data["activities"].append({
+            activity_data = {
                 "id": a.get("activityId"),
                 "name": a.get("activityName"),
                 "type": a.get("activityType", {}).get("typeKey"),
@@ -176,7 +211,18 @@ def collect_all_data(client, days=90):
                 "calories": a.get("calories"),
                 "elevation_gain": a.get("elevationGain"),
                 "vo2max": a.get("vO2MaxValue"),
-            })
+            }
+            
+            # Fetch splits for recent activities (last 5 to avoid rate limiting)
+            if len(data["activities"]) < 5:
+                try:
+                    splits = get_activity_splits(client, a.get("activityId"))
+                    if splits:
+                        activity_data["splits"] = splits
+                except:
+                    pass
+            
+            data["activities"].append(activity_data)
     except Exception as e:
         log.warning(f"Activities fetch failed: {e}")
     
