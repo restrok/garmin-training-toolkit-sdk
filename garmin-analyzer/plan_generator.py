@@ -346,6 +346,18 @@ def generate_plan(garmin_data: dict, prefs: dict) -> tuple[list[dict], dict]:
         log.info(f"Using data-driven HR zones: Z1<{hr_zones['z1'][1]}, Z2={hr_zones['z2'][0]}-{hr_zones['z2'][1]}, Z3={hr_zones['z3'][0]}-{hr_zones['z3'][1]}, Z4={hr_zones['z4'][0]}-{hr_zones['z4'][1]}")
     else:
         log.info(f"Using age-based HR zones: {hr_zones}")
+        
+    # Override with manual configuration from .env if present
+    if prefs.get("HR_Z1_MAX"):
+        try:
+            hr_zones["z1"] = (0, int(prefs["HR_Z1_MAX"]))
+            hr_zones["z2"] = (int(prefs["HR_Z1_MAX"]) + 1, int(prefs["HR_Z2_MAX"]))
+            hr_zones["z3"] = (int(prefs["HR_Z2_MAX"]) + 1, int(prefs["HR_Z3_MAX"]))
+            hr_zones["z4"] = (int(prefs["HR_Z3_MAX"]) + 1, int(prefs["HR_Z4_MAX"]))
+            hr_zones["z5"] = (int(prefs["HR_Z4_MAX"]) + 1, hr_zones.get("max_hr", 193))
+            log.info(f"Overriding HR zones with manual configuration from .env: Z2={hr_zones['z2']}")
+        except (ValueError, KeyError):
+            pass
     
     race_type = prefs.get("GOAL_RACE", "10K")
     goal_date = prefs.get("GOAL_DATE", "")
