@@ -64,10 +64,13 @@ desktop.ini
 .mypy_cache/
 .ruff_cache/
 .pytest_cache/
+.opencode/
 
 # Local database
 weather/weather.db
 
 # Data output
 garmin-workout-uploader/workouts.json
+*.backup
+
 

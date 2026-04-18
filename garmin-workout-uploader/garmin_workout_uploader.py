@@ -11,13 +11,11 @@ import sys
 import time
 from pathlib import Path
 
-from garminconnect import Garmin
 from garminconnect.workout import (
     RunningWorkout,
     WorkoutSegment,
     ExecutableStep,
     create_cooldown_step,
-    create_interval_step,
     create_recovery_step,
     create_warmup_step,
 )
@@ -27,7 +25,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from garmin_utils import (
     find_token_file,
     get_authenticated_client,
-    load_env_file,
     validate_workouts_file,
     REQUEST_DELAY_MIN,
     REQUEST_DELAY_MAX,

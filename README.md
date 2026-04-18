@@ -5,22 +5,30 @@ A complete system for analyzing Garmin Connect data and generating personalized 
 ## Quick Start
 
 ```bash
+# 0. Initial setup (optional - configure goals, paces, city)
+python3 garmin.py setup                    # Interactive wizard
+python3 garmin.py setup --show            # Show current config
+
 # 1. Authenticate (browser opens - log in with Garmin credentials)
 python3 garmin.py auth
 
 # 2. Collect your data from Garmin Connect
 python3 garmin.py collect
 
-# 3. Analyze & Predict
-python3 garmin.py progress      # Training stats
-python3 garmin.py zones         # Personalized HR zones
-python3 garmin.py recovery      # HRV & readiness
-python3 garmin.py predict      # Race time predictions
-python3 garmin.py best          # Best times
+# 3. Initialize weather module (optional - for weather-aware planning)
+python3 garmin.py weather init --city Madrid --backfill
 
-# 4. Generate & Upload Plan
-python3 garmin.py plan              # Create training plan
-python3 garmin.py upload --clean-all # Upload to Garmin Connect (cleans old workouts first)
+# 4. Analyze & Predict
+python3 garmin.py progress      # Training stats
+python3 garmin.py analyze      # Recent workouts with optional weather
+python3 garmin.py zones        # Personalized HR zones
+python3 garmin.py recovery     # HRV & readiness
+python3 garmin.py predict     # Race time predictions
+python3 garmin.py best         # Best times
+
+# 5. Generate & Upload Plan
+python3 garmin.py plan --weather         # Generate with weather adjustment
+python3 garmin.py upload --clean-all     # Upload to Garmin Connect
 ```
 
 ---
@@ -38,8 +46,11 @@ python3 garmin.py upload --clean-all # Upload to Garmin Connect (cleans old work
 | `best` | Best race times | `--distance 10k`, `--limit 5` |
 | `compare` | Plan vs training | |
 | `export` | Full report | `--file output.md` |
-| `plan` | Generate plan | |
+| `plan` | Generate plan | `--weather`, `--no-weather`, `--race-date YYYY-MM-DD` |
 | `upload` | Upload workouts | `--clean-all`, `--delete ID`, `--file FILE` |
+| `setup` | Setup wizard | `--show`, `--section goals\|profile\|paces` |
+| `analyze` | Analyze workouts | `--days 30`, `--weather`, `--no-weather` |
+| `weather` | Weather module | `init --city <city> [--backfill]`, `cron`, `test` |
 
 ---
 
@@ -59,7 +70,33 @@ RACE_PACE_TARGET=5:30
 EASY_PACE=6:00
 TEMPO_PACE=5:45
 INTERVAL_PACE=5:15
+
+# Weather (optional - for weather-aware planning)
+WEATHER_CITY=Madrid
 ```
+
+### Weather Module
+
+The weather module integrates with the toolkit for context-aware analysis and planning:
+
+```bash
+# Initialize (auto-geocodes city)
+python3 garmin.py weather init --city Madrid
+
+# Backfill historical data (first time - downloads last year)
+python3 garmin.py weather init --city Madrid --backfill
+
+# Set up hourly cron job for current weather
+python3 garmin.py weather cron
+
+# Test weather fetch
+python3 garmin.py weather test
+```
+
+**Features:**
+- Historical weather for planning (uses last year if current year not available)
+- Current weather for activity analysis
+- Auto-fallback to previous year if current year data not available
 
 ---
 
@@ -190,7 +227,30 @@ When extending this codebase:
 5. **Predictions**: Use Riegel formula with median of best 3 runs
 6. **Rate limits**: Always add delays between API calls
 7. **Workout targets**: Add HR targets (typeId: 4) to easy runs, pace targets (typeId: 5) to intervals
-8. **Library version**: Use garminconnect==0.2.40 (not 0.3.x) for workout creation to work with pydantic
+ahh
+
+### Weather Module API
+
+The weather module (`weather/`) is standalone and reusable:
+
+```python
+from weather import init, backfill_last_year, get_current, get_for_date, get_month_summary, is_configured
+
+# Setup
+init("Madrid")                    # Auto-geocode city
+backfill_last_year()              # Fetch 365 days historical
+
+# Query
+get_current()                     # Current weather
+get_for_date("2026-07-15")        # Historical for specific date
+get_month_summary("2026-07-15")    # Monthly average (falls back to last year)
+is_configured()                   # Check if city set
+```
+
+**APIs used**:
+- Open-Meteo Geocoding (free, no key) - for city → lat/lon
+- Open-Meteo Archive (free, no key) - for historical data
+- Open-Meteo Forecast (free, no key) - for current weather
 
 ---
 
@@ -199,11 +259,13 @@ When extending this codebase:
 - Python 3.10+
 - Playwright (`pip install playwright`, `playwright install chromium`)
 - **garminconnect==0.2.40** (IMPORTANT: 0.3.x has pydantic v2 compatibility issues with workout creation)
+- **python-dotenv** (for weather module config)
 
 ```bash
 # Install with correct versions
 pip install garminconnect==0.2.40 requests-oauthlib playwright
 pip install garth  # required by garminconnect 0.2.40
+pip install python-dotenv
 playwright install chromium
 ```
 
@@ -217,23 +279,37 @@ The collector fetches lap/split data for recent activities (last 5). Each split 
 
 This allows per-lap analysis of workouts (warmup vs run vs cooldown).
 
+### Activity Location
+
+The collector now captures location data from activities:
+- `latitude`, `longitude` - GPS coordinates of activity start
+- `location` - Location name (if available)
+
+This enables weather-aware analysis - the analyze command can fetch weather conditions for each workout location.
+
 
 ---
 
 ## File Structure
 
 ```
-garmin/
 ├── .env                              # Configuration
 ├── garmin.py                         # Main CLI (all commands)
 ├── garmin_auth.py                    # Browser authentication
 ├── garmin_utils.py                   # Shared utilities
 ├── garmin_tokens.json                # Auth tokens
+├── weather/                          # Weather module (agnostic)
+│   ├── __init__.py                   # Public API
+│   ├── config.py                    # .env handling
+│   ├── storage/sqlite.py            # SQLite storage
+│   └── sources/                     # Weather APIs
+│       ├── open_meteo.py            # Historical + geocoding
+│       └── openweather.py           # Current weather
 ├── garmin-analyzer/
-│   ├── collector.py                  # Data collection
+│   ├── collector.py                  # Data collection (+ lat/lon)
 │   ├── plan_generator.py             # Plan generation
 │   └── data/
-│       ├── garmin_report.json         # Raw data
+│       ├── garmin_report.json        # Raw data
 │       └── garmin_report.md          # Human report
 └── garmin-workout-uploader/
     ├── garmin_workout_uploader.py    # Upload/schedule

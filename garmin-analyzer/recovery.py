@@ -20,7 +20,7 @@ REPORT_FILE = Path(__file__).parent / "data" / "garmin_report.json"
 def load_data() -> dict:
     """Load Garmin report data."""
     if not REPORT_FILE.exists():
-        log.error(f"Run collector.py first")
+        log.error("Run collector.py first")
         return {}
     with open(REPORT_FILE) as f:
         return json.load(f)
@@ -88,7 +88,7 @@ def main():
     import argparse
     parser = argparse.ArgumentParser(description="Recovery Analysis")
     parser.add_argument("--days", type=int, default=7, help="Days to analyze")
-    args = parser.parse_args()
+    parser.parse_args()
     
     print_recovery_report()
 

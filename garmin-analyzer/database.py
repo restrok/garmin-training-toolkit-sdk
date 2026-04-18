@@ -6,9 +6,8 @@ SQLite database for Garmin training data persistence.
 import json
 import logging
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional
 
 logging.basicConfig(
     level=logging.INFO,
@@ -268,6 +267,3 @@ def get_pending_workouts() -> list[dict]:
         ORDER BY date
     """).fetchall()
     return [dict(r) for r in rows]
-
-
-from datetime import timedelta

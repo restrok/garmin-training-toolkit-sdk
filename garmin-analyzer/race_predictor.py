@@ -5,7 +5,6 @@ Predicts race finish times based on current fitness (VO2max, recent training dat
 """
 
 import logging
-import math
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -179,12 +178,10 @@ def print_predictions(predictions: dict):
 def main():
     import argparse
     import sys
-    import json
-    from pathlib import Path
     
     sys.path.insert(0, str(Path(__file__).parent.parent))
     
-    from garmin_utils import find_token_file, get_authenticated_client, load_env_file
+    from garmin_utils import find_token_file, get_authenticated_client
     from garmin_analyzer.database import get_activities_since
     
     parser = argparse.ArgumentParser(description="Race Predictor")
