@@ -283,9 +283,39 @@ def main():
     
     log.info("Uploading and scheduling workouts...")
     
+    # Pre-fetch all workouts to see if we've already uploaded some
+    existing_workouts = client.get_workouts()
+    existing_names = [w.get("workoutName") for w in existing_workouts]
+    
+    # We will also need to check scheduled workouts to avoid duplicate scheduling
+    # Let's get the distinct year/months from the plan
+    months_to_fetch = set()
+    for w in WORKOUTS:
+        date_parts = w["date"].split("-")
+        months_to_fetch.add((int(date_parts[0]), int(date_parts[1])))
+    
+    scheduled_workouts = []
+    for year, month in months_to_fetch:
+        try:
+            cal = client.get_scheduled_workouts(year, month)
+            if cal and "calendarItems" in cal:
+                scheduled_workouts.extend(cal["calendarItems"])
+        except Exception as e:
+            log.warning(f"Could not fetch calendar for {year}-{month}: {e}")
+    
+    scheduled_dates = set()
+    for item in scheduled_workouts:
+        # Check if it's a workout
+        if item.get("itemType") == "workout":
+            scheduled_dates.add(item.get("date"))
+
     for i, workout_data in enumerate(WORKOUTS, 1):
         log.info(f"[{i}/{len(WORKOUTS)}] {workout_data['name']} on {workout_data['date']}")
         
+        if workout_data["date"] in scheduled_dates:
+            log.info("Already scheduled on this date, skipping to resume gracefully...")
+            continue
+            
         try:
             workout = create_workout(workout_data)
             

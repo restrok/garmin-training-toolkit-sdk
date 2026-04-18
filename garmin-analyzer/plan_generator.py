@@ -441,8 +441,11 @@ def generate_plan(garmin_data: dict, prefs: dict) -> tuple[list[dict], dict]:
                 workouts.append(day2_easy)
             hard_workout = None
         elif phase == "build":
-            # VO2max intervals - 20% of training
-            hard_workout = get_interval_workout(week, phase, interval_sec, hr_zones)
+            # Alternate between Tempo and Intervals in build phase
+            if week % 2 == 0:
+                hard_workout = get_tempo_workout(week, phase, tempo_sec, hr_zones)
+            else:
+                hard_workout = get_interval_workout(week, phase, interval_sec, hr_zones)
         else:  # peak/taper
             hard_workout = get_interval_workout(week, phase, interval_sec, hr_zones)
         
