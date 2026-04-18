@@ -241,13 +241,15 @@ def get_tempo_workout(week: int, phase: str, tempo_sec: int, hr_zones: dict = No
     
     total_duration = 600 + tempo_dur + 300  # warmup + tempo + cooldown
     
+    tempo_target = create_pace_target(tempo_sec)
+    
     return {
         "name": f"Tempo Run {week}",
         "description": f"{tempo_dur//60}min at threshold pace",
         "duration": total_duration,
         "steps": [
             ["warmup", 600, None],
-            ["run", tempo_dur, None],
+            ["run", tempo_dur, tempo_target],
             ["cooldown", 300, None],
         ]
     }
