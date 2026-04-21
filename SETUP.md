@@ -1,85 +1,39 @@
-# ⚠️ IMPORTANT: Always use virtual environment
+# ⚠️ IMPORTANT: Environment Setup
 
-## Quick Start
+This project uses `uv` for modern, fast dependency management. Do not use legacy `pip install -r requirements.txt` workflows.
+
+## Quick Start (with `uv`)
 
 ```bash
 # 1. Navigate to project
 cd /path/to/garmin-training-toolkit
 
-# 2. Activate venv (REQUIRED - do this every time)
-source .venv/bin/activate  # Linux/Mac
-# or
-.venv\Scripts\activate      # Windows
+# 2. Sync dependencies (uv automatically creates the virtual environment)
+cd garmin_toolkit
+uv sync
 
-# 3. Install dependencies (venv must be active!)
-pip install -r requirements.txt
+# 3. Authenticate (first time only)
+uv run python3 ../garmin.py auth
 
-# 4. Authenticate (first time only)
-python3 garmin.py auth
-
-# 5. Use the toolkit
-python3 garmin.py collect
-python3 garmin.py upload
-python3 garmin.py analyze
+# 4. Run an ingestion test
+uv run python3 ../example_ingestion.py
 ```
 
-## What is virtual environment?
+## Why use `uv`?
 
-A virtual environment (`venv`) creates an isolated Python environment for this project. It keeps project dependencies separate from your system Python and other projects.
-
-## Why use venv?
-
-- **No system pollution** - packages don't affect other Python projects
-- **Version control** - exact dependency versions, reproducible
-- **Clean removal** - just delete `.venv` folder to clean up
-- **Shared machines** - safe to use on shared systems
-
-## NEVER do this:
-
-```bash
-# ❌ DON'T install packages globally
-pip install garminconnect
-pip install -r requirements.txt  # (without venv active!)
-
-# ✅ ALWAYS use venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
-
-## If you see packages in ~/.local or system pip:
-
-```bash
-# Uninstall the problematic packages
-pip uninstall garminconnect garth curl_cffi -y
-
-# Then reinstall in venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
-
-## Troubleshooting
-
-**"Module not found" errors:**
-```bash
-# Make sure venv is activated
-source .venv/bin/activate
-python3 garmin.py ...
-```
-
-**Auth fails with rate limit:**
-- Wait a few minutes before retrying
-- Garmin limits API calls
-- Use `--headless` flag for faster login
+- **Blazing Fast:** Written in Rust, it resolves and installs dependencies in milliseconds.
+- **Automatic venv:** You don't need to manually `source .venv/bin/activate`. Using `uv run <command>` automatically executes within the isolated environment.
+- **Strict Resolution:** Ensures exact dependency versions across all machines.
 
 ## Project Structure
 
 ```
 garmin-training-toolkit/
-├── .venv/                    # Virtual environment (gitignored)
-├── garmin.py                 # Main CLI
-├── garmin_utils.py           # Shared utilities
-├── garmin_auth.py            # Authentication
-├── garmin_tokens/            # Token storage
-├── requirements.txt         # Dependencies
+├── garmin.py                 # Main CLI (Authentication only)
+├── example_ingestion.py      # Example of how to use the SDK
+├── garmin_toolkit/           # The core SDK Package
+│   ├── pyproject.toml        # Dependencies definition
+│   ├── src/                  # Extractors and Pydantic Models
+│   └── uv.lock               # Dependency lockfile
 └── ...
 ```
