@@ -241,13 +241,15 @@ def get_tempo_workout(week: int, phase: str, tempo_sec: int, hr_zones: dict = No
     
     total_duration = 600 + tempo_dur + 300  # warmup + tempo + cooldown
     
+    tempo_target = create_pace_target(tempo_sec)
+    
     return {
         "name": f"Tempo Run {week}",
         "description": f"{tempo_dur//60}min at threshold pace",
         "duration": total_duration,
         "steps": [
             ["warmup", 600, None],
-            ["run", tempo_dur, None],
+            ["run", tempo_dur, tempo_target],
             ["cooldown", 300, None],
         ]
     }
@@ -346,6 +348,18 @@ def generate_plan(garmin_data: dict, prefs: dict) -> tuple[list[dict], dict]:
         log.info(f"Using data-driven HR zones: Z1<{hr_zones['z1'][1]}, Z2={hr_zones['z2'][0]}-{hr_zones['z2'][1]}, Z3={hr_zones['z3'][0]}-{hr_zones['z3'][1]}, Z4={hr_zones['z4'][0]}-{hr_zones['z4'][1]}")
     else:
         log.info(f"Using age-based HR zones: {hr_zones}")
+        
+    # Override with manual configuration from .env if present
+    if prefs.get("HR_Z1_MAX"):
+        try:
+            hr_zones["z1"] = (0, int(prefs["HR_Z1_MAX"]))
+            hr_zones["z2"] = (int(prefs["HR_Z1_MAX"]) + 1, int(prefs["HR_Z2_MAX"]))
+            hr_zones["z3"] = (int(prefs["HR_Z2_MAX"]) + 1, int(prefs["HR_Z3_MAX"]))
+            hr_zones["z4"] = (int(prefs["HR_Z3_MAX"]) + 1, int(prefs["HR_Z4_MAX"]))
+            hr_zones["z5"] = (int(prefs["HR_Z4_MAX"]) + 1, hr_zones.get("max_hr", 193))
+            log.info(f"Overriding HR zones with manual configuration from .env: Z2={hr_zones['z2']}")
+        except (ValueError, KeyError):
+            pass
     
     race_type = prefs.get("GOAL_RACE", "10K")
     goal_date = prefs.get("GOAL_DATE", "")
@@ -429,8 +443,11 @@ def generate_plan(garmin_data: dict, prefs: dict) -> tuple[list[dict], dict]:
                 workouts.append(day2_easy)
             hard_workout = None
         elif phase == "build":
-            # VO2max intervals - 20% of training
-            hard_workout = get_interval_workout(week, phase, interval_sec, hr_zones)
+            # Alternate between Tempo and Intervals in build phase
+            if week % 2 == 0:
+                hard_workout = get_tempo_workout(week, phase, tempo_sec, hr_zones)
+            else:
+                hard_workout = get_interval_workout(week, phase, interval_sec, hr_zones)
         else:  # peak/taper
             hard_workout = get_interval_workout(week, phase, interval_sec, hr_zones)
         
