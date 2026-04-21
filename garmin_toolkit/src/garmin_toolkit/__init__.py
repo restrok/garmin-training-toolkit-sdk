@@ -1,4 +1,4 @@
-from .auth import get_authenticated_client
+from .utils import get_authenticated_client
 from .models.activities import Activity, ActivitySplit
 from .models.biometrics import HRVData, SleepData, ReadinessData
 from .extractors.activities import get_activities, get_activity_splits
