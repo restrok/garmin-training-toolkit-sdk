@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime, timedelta
 import json
-from garmin_toolkit.extractors import get_activities, get_hrv_data, get_readiness_data
+from garmin_toolkit.extractors import get_activities, get_hrv_data, get_readiness_data, get_activity_telemetry
 from garmin_toolkit.utils import get_authenticated_client, find_token_file
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -39,9 +39,18 @@ def main():
     log.info(f"Retrieved {len(hrv)} HRV records.")
     log.info(f"Retrieved {len(readiness)} readiness records.")
     
-    # Example of dumping Pydantic model to json
+    # 2. Detail Extraction (Telemetry) for the most recent activity
     if activities:
-         log.info("\nSample Activity (Pydantic Model to JSON):")
+         latest_activity_id = activities[0].id
+         log.info(f"\nFetching detailed telemetry for latest activity ({latest_activity_id})...")
+         telemetry = get_activity_telemetry(client, latest_activity_id)
+         log.info(f"Retrieved {telemetry.metric_count} telemetry ticks.")
+         
+         if telemetry.ticks:
+             log.info("\nSample Telemetry Point (Tick 1):")
+             print(json.dumps(telemetry.ticks[0].model_dump(), indent=2, default=str))
+
+         log.info("\nSample Activity Summary (Pydantic Model to JSON):")
          print(json.dumps(activities[0].model_dump(), indent=2, default=str))
 
     log.info("\nIngestion test complete. Data is ready for the external AI pipeline.")
