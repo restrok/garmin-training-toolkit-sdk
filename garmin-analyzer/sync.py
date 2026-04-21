@@ -5,6 +5,7 @@ Downloads completed workouts from Garmin Connect to compare with planned workout
 """
 
 import logging
+import sys
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -15,13 +16,11 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-import sys
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent))  # noqa: E402
 
-from garmin_utils import (
+from garmin_utils import (  # noqa: E402
     find_token_file,
     get_authenticated_client,
-    load_env_file,
     REQUEST_DELAY_MIN,
 )
 

@@ -4,10 +4,11 @@
 !garmin-workout-uploader/.env.example
 garmin_tokens.json
 **/garmin_tokens.json
+garmin_tokens/
 
 # Personal data
-workouts.json
-**/workouts.json
+workouts**.json
+**/workouts**.json
 *_report.md
 garmin_report.md
 garmin-analyzer/data/*.json
@@ -16,25 +17,62 @@ garmin-analyzer/data/*.md
 # Python
 __pycache__/
 *.py[cod]
-*.egg-info/
-dist/
+*$py.class
+*.so
+.Python
+env/
 build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
 # Virtual environments
 .venv/
 venv/
+ENV/
+env.bak/
+venv.bak/
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
+.project
+.pydevproject
+.settings/
 
 # OS
 .DS_Store
 Thumbs.db
+desktop.ini
 
-# Data output (optional - uncomment to ignore)
-# garmin-analyzer/data/*.json
-# garmin-analyzer/data/*.md
+# Caches
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.opencode/
+
+# Local database
+weather/weather.db
+
+# Data output
 garmin-workout-uploader/workouts.json
+*.backup
+
+
+*ai-infra*
+garmin_toolkit/

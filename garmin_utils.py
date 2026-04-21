@@ -7,7 +7,6 @@ Handles token loading, authentication, and common configuration.
 import base64
 import json
 import logging
-import os
 import random
 import time
 from functools import wraps
@@ -21,9 +20,9 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 TOKEN_LOCATIONS = [
-    Path(__file__).parent.parent / "garmin_tokens.json",
-    Path(__file__).parent.parent / "garmin-workout-uploader" / "garmin_tokens.json",
-    Path.home() / ".garminconnect" / "garmin_tokens.json",
+    Path(__file__).parent.parent / "garmin_tokens",
+    Path(__file__).parent / "garmin_tokens",
+    Path.home() / ".garminconnect",
 ]
 
 ENV_FILE = Path(__file__).parent / ".env"
@@ -118,22 +117,23 @@ def load_env_file(env_path: Optional[Path] = None) -> dict:
     return prefs
 
 
-def get_authenticated_client(token_file: Optional[Path] = None):
-    """Get authenticated Garmin client using saved tokens."""
+def get_authenticated_client(token_dir: Optional[Path] = None):
+    """Get authenticated Garmin client using garminconnect native auth."""
+    from pathlib import Path
     from garminconnect import Garmin
     
-    if token_file is None:
-        token_file = find_token_file()
-    
-    if not token_file:
-        raise Exception("Not authenticated. Run garmin_auth_browser.py first.")
-    
-    with open(token_file) as f:
-        tokens = json.load(f)
+    # Check for tokens in standard location
+    token_path = Path.home() / ".garminconnect" / "garmin_tokens.json"
+    if not token_path.exists():
+        raise Exception("Not authenticated. Run garmin.py auth first.")
     
     client = Garmin()
-    client.client.loads(json.dumps(tokens))
-    log.info(f"Authenticated using tokens from {token_file}")
+    try:
+        client.client.load(str(token_path))
+    except Exception as e:
+        raise Exception(f"Failed to load tokens: {e}")
+    
+    log.info("Authenticated via garminconnect (native DI OAuth)")
     return client
 
 
