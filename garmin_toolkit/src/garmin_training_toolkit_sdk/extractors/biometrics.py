@@ -1,8 +1,63 @@
 import logging
 from typing import List, Optional
 from ..models.biometrics import HRVData, SleepData, ReadinessData, BodyBatteryData, StressData, TrainingStatusData
+from ..models.user import UserProfile, BodyComposition
 
 log = logging.getLogger(__name__)
+
+def get_user_profile(garmin_client) -> Optional[UserProfile]:
+    """Fetch user profile information by combining data from multiple endpoints."""
+    try:
+        profile = garmin_client.get_user_profile()
+        settings = garmin_client.get_userprofile_settings()
+        
+        user_data = profile.get("userData", {})
+        
+        # Calculate age from birthDate
+        age = None
+        birth_date_str = user_data.get("birthDate")
+        if birth_date_str:
+            from datetime import datetime
+            birth_date = datetime.strptime(birth_date_str, "%Y-%m-%d")
+            today = datetime.now()
+            age = today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
+
+        # Weight is in grams in userData
+        weight_kg = user_data.get("weight")
+        if weight_kg:
+            weight_kg = weight_kg / 1000.0
+
+        return UserProfile(
+            display_name=settings.get("displayName"),
+            gender=user_data.get("gender"),
+            age=age,
+            height_cm=user_data.get("height"),
+            weight_kg=weight_kg,
+            max_hr=user_data.get("maxHeartRate"),
+            resting_hr=user_data.get("restingHeartRate")
+        )
+    except Exception as e:
+        log.warning(f"User profile fetch failed: {e}")
+    return None
+
+def get_body_composition(garmin_client, start_date: str, end_date: str) -> List[BodyComposition]:
+    """Fetch body composition data for a date range."""
+    composition_records = []
+    try:
+        raw_composition = garmin_client.get_body_composition(start_date, end_date)
+        if raw_composition and "allMetrics" in raw_composition:
+            for m in raw_composition["allMetrics"]:
+                composition_records.append(BodyComposition(
+                    date=m.get("calendarDate"),
+                    weight_kg=m.get("weight"),
+                    bmi=m.get("bmi"),
+                    fat_percentage=m.get("bodyFat"),
+                    muscle_mass_kg=m.get("muscleMass"),
+                    water_percentage=m.get("waterPercentage")
+                ))
+    except Exception as e:
+        log.warning(f"Body composition fetch failed: {e}")
+    return composition_records
 
 def get_hrv_data(garmin_client, start_date: str, end_date: str) -> List[HRVData]:
     """Fetch HRV data for a given date range."""
