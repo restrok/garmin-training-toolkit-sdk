@@ -22,7 +22,12 @@ log = logging.getLogger(__name__)
 
 TOKEN_LOCATIONS = [
     Path(__file__).parent.parent / "garmin_tokens.json",
-    Path(__file__).parent.parent / "garmin-workout-uploader" / "garmin_tokens.json",
+    Path(__file__).parent.parent.parent / "garmin_tokens.json",
+    Path(__file__).parent.parent.parent.parent / "garmin_tokens.json",
+    Path(__file__).parent.parent.parent.parent.parent / "garmin_tokens.json",
+    Path(__file__).parent / "garmin_tokens.json",
+    Path.cwd() / "garmin_tokens.json",
+    Path.cwd().parent / "garmin_tokens.json",
     Path.home() / ".garminconnect" / "garmin_tokens.json",
 ]
 
