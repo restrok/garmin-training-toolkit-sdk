@@ -1,5 +1,5 @@
 import logging
-from typing import List, Dict, Any
+from typing import List
 from ..models.activities import Activity, ActivitySplit
 from ..models.telemetry import ActivityTelemetry, ActivityTelemetryPoint
 
@@ -47,7 +47,12 @@ def get_activity_telemetry(client, activity_id: int) -> ActivityTelemetry:
                 cadence_spm=get_val(metrics_array, "directDoubleCadence"),
                 power_w=get_val(metrics_array, "directPower"),
                 fractional_cadence=get_val(metrics_array, "directFractionalCadence"),
-                gap_mps=get_val(metrics_array, "directGradeAdjustedSpeed")
+                gap_mps=get_val(metrics_array, "directGradeAdjustedSpeed"),
+                stride_length_mm=get_val(metrics_array, "directStrideLength"),
+                vertical_oscillation_cm=get_val(metrics_array, "directVerticalOscillation"),
+                ground_contact_time_ms=get_val(metrics_array, "directGroundContactTime"),
+                temperature_c=get_val(metrics_array, "directAmbientTemperature") if get_val(metrics_array, "directAmbientTemperature") is not None else get_val(metrics_array, "directAirTemperature"),
+                run_walk_index=get_val(metrics_array, "directRunWalkIndex")
             ))
             
         return ActivityTelemetry(

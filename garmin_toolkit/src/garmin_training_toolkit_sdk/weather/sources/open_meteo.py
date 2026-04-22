@@ -1,10 +1,7 @@
-import requests
+import requests  # type: ignore
 from datetime import datetime, timedelta
-from pathlib import Path
-import sys
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-from weather.config import config
-from weather.storage.sqlite import db
+from garmin_training_toolkit_sdk.weather.config import config
+from garmin_training_toolkit_sdk.weather.storage.sqlite import db
 
 GEOCODE_URL = "https://geocoding-api.open-meteo.com/v1/search"
 ARCHIVE_URL = "https://archive-api.open-meteo.com/v1/archive"

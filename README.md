@@ -14,12 +14,12 @@ This project uses `uv` for dependency management.
 
 ```bash
 # In your consumer project (if using uv):
-uv add git+https://github.com/restrok/garmin-training-toolkit.git#subdirectory=garmin_toolkit
+uv add git+https://github.com/restrok/garmin-training-toolkit-sdk.git#subdirectory=garmin_training_toolkit_sdk
 ```
 
 *Or for local development within this repository:*
 ```bash
-cd garmin_toolkit
+cd garmin_training_toolkit_sdk
 uv sync
 ```
 
@@ -37,8 +37,8 @@ python3 garmin.py auth
 
 ```python
 import json
-from garmin_toolkit.utils import get_authenticated_client, find_token_file
-from garmin_toolkit.extractors import get_activities, get_activity_telemetry
+from garmin_training_toolkit_sdk.utils import get_authenticated_client, find_token_file
+from garmin_training_toolkit_sdk.extractors import get_activities, get_activity_telemetry
 
 # 1. Connect
 token_file = find_token_file()
@@ -73,5 +73,5 @@ All extractors return typed Pydantic models ensuring data reliability.
 ## Included Modules
 
 While the core focus is extraction, the SDK also bundles:
-*   **`garmin_toolkit.uploaders`**: Logic for uploading custom workout plans back to Garmin.
-*   **`garmin_toolkit.weather`**: A local SQLite-backed weather module (OpenMeteo) to enrich activity data with historical weather context.
+*   **`garmin_training_toolkit_sdk.uploaders`**: Logic for uploading custom workout plans back to Garmin.
+*   **`garmin_training_toolkit_sdk.weather`**: A local SQLite-backed weather module (OpenMeteo) to enrich activity data with historical weather context.

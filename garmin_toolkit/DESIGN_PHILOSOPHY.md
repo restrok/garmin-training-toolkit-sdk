@@ -1,6 +1,6 @@
 # Design Philosophy: Why build an SDK over garminconnect?
 
-This document outlines the architectural decisions behind building the `garmin_toolkit` SDK instead of simply using the raw `garminconnect` Python library in our AI pipelines.
+This document outlines the architectural decisions behind building the `garmin_training_toolkit_sdk` SDK instead of simply using the raw `garminconnect` Python library in our AI pipelines.
 
 ## The Problem with Raw API Wrappers
 
@@ -10,9 +10,9 @@ The `garminconnect` library is an excellent, low-level wrapper around Garmin's u
 2.  **Telemetry Compression:** Garmin does not return telemetry (second-by-second data) as clean key-value pairs. It returns a complex matrix of `metricDescriptors` (indexes) and flat arrays of values to save bandwidth. Parsing this requires complex mapping logic.
 3.  **Coupling:** Mixing API-specific rate-limiting logic, token management, and JSON parsing directly into the reasoning loop of an AI agent violates the separation of concerns.
 
-## The Solution: `garmin_toolkit` SDK
+## The Solution: `garmin_training_toolkit_sdk` SDK
 
-The `garmin_toolkit` acts as an anti-corruption layer (Data Connector) between Garmin's erratic API and our Enterprise AI Platform.
+The `garmin_training_toolkit_sdk` acts as an anti-corruption layer (Data Connector) between Garmin's erratic API and our Enterprise AI Platform.
 
 ### 1. Strict Data Contracts (Pydantic)
 By wrapping all outputs in Pydantic models (e.g., `TrainingStatusData`, `ActivityTelemetry`), the SDK guarantees the schema. 
@@ -30,4 +30,4 @@ While `garminconnect` handles basic HTTP requests, this toolkit provides a unifi
 
 ## Conclusion
 
-In a modern Data/AI architecture, `garminconnect` is simply the HTTP transport layer. The `garmin_toolkit` is the actual **Data Product**—providing clean, reliable, and strictly typed data contracts that external AI systems can blindly trust.
+In a modern Data/AI architecture, `garminconnect` is simply the HTTP transport layer. The `garmin_training_toolkit_sdk` is the actual **Data Product**—providing clean, reliable, and strictly typed data contracts that external AI systems can blindly trust.

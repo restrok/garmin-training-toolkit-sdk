@@ -1,8 +1,5 @@
 import sqlite3
-from pathlib import Path
-import sys
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-from weather.config import config
+from garmin_training_toolkit_sdk.weather.config import config
 
 class WeatherDB:
     def __init__(self, db_path=None):

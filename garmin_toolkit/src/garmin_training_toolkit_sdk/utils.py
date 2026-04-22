@@ -7,7 +7,6 @@ Handles token loading, authentication, and common configuration.
 import base64
 import json
 import logging
-import os
 import random
 import time
 from functools import wraps
@@ -71,7 +70,9 @@ def retry_with_backoff(max_retries: int = MAX_RETRIES, initial_delay: float = 1.
                     
                     time.sleep(delay)
             
-            raise last_exception
+            if last_exception:
+                raise last_exception
+            raise Exception("Retry failed without specific exception")
         return wrapper
     return decorator
 

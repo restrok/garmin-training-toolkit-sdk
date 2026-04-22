@@ -1,14 +1,14 @@
 import logging
 from datetime import datetime, timedelta
 import json
-from garmin_toolkit.extractors import get_activities, get_hrv_data, get_readiness_data, get_activity_telemetry
-from garmin_toolkit.utils import get_authenticated_client, find_token_file
+from garmin_training_toolkit_sdk.extractors import get_activities, get_hrv_data, get_readiness_data, get_activity_telemetry
+from garmin_training_toolkit_sdk.utils import get_authenticated_client, find_token_file
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 log = logging.getLogger(__name__)
 
 def main():
-    log.info("Starting example data ingestion using the new garmin_toolkit SDK")
+    log.info("Starting example data ingestion using the new garmin_training_toolkit_sdk SDK")
     
     token_file = find_token_file()
     if not token_file:
