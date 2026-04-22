@@ -36,3 +36,26 @@ Issues = "https://github.com/restrok/garmin-training-toolkit-sdk/issues"
 [build-system]
 requires = ["uv_build>=0.11.7,<0.12.0"]
 build-backend = "uv_build"
+
+[tool.mypy]
+python_version = "3.10"
+ignore_missing_imports = true
+check_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = ["requests", "requests.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "garminconnect.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "requests_oauthlib.*"
+ignore_missing_imports = true
+
+[dependency-groups]
+dev = [
+    "types-requests>=2.33.0.20260408",
+    "types-requests-oauthlib>=2.0.0.20260408",
+]

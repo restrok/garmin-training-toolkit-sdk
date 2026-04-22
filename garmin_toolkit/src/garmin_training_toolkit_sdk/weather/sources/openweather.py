@@ -1,10 +1,7 @@
-import requests
+import requests  # type: ignore
 from datetime import datetime
-from pathlib import Path
-import sys
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-from weather.storage.sqlite import db
-from weather.sources.open_meteo import get_city_coords
+from garmin_training_toolkit_sdk.weather.storage.sqlite import db
+from garmin_training_toolkit_sdk.weather.sources.open_meteo import get_city_coords
 
 CURRENT_URL = "https://api.open-meteo.com/v1/forecast"
 

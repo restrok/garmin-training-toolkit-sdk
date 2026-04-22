@@ -1,5 +1,5 @@
 import logging
-from typing import List, Dict, Any
+from typing import List
 from ..models.activities import Activity, ActivitySplit
 from ..models.telemetry import ActivityTelemetry, ActivityTelemetryPoint
 

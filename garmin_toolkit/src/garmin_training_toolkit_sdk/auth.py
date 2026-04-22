@@ -4,14 +4,12 @@ Garmin Browser Authentication
 Uses Playwright to open a real browser for login, bypassing Cloudflare blocking.
 """
 
-import json
 import logging
 import re
-import sys
 import time
-from pathlib import Path
+from typing import Any
 
-import requests
+import requests  # type: ignore
 from playwright.sync_api import sync_playwright
 from requests_oauthlib import OAuth1Session
 
@@ -67,7 +65,7 @@ def exchange_oauth2(oauth1: dict, consumer: dict) -> dict:
         resource_owner_secret=oauth1["oauth_token_secret"],
     )
     url = "https://connectapi.garmin.com/oauth-service/oauth/exchange/user/2.0"
-    data = {}
+    data: dict[str, Any] = {}
     resp = sess.post(
         url,
         headers={

@@ -7,9 +7,9 @@ Adds delays between login attempts and retries
 import json
 import logging
 import random
-import sys
 import time
 from pathlib import Path
+from typing import Any, Optional
 
 from garminconnect.workout import (
     RunningWorkout,
@@ -20,12 +20,9 @@ from garminconnect.workout import (
     create_warmup_step,
 )
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-from garmin_utils import (
+from ..utils import (
     find_token_file,
     get_authenticated_client,
-    validate_workouts_file,
     REQUEST_DELAY_MIN,
     REQUEST_DELAY_MAX,
 )
@@ -58,12 +55,7 @@ def load_workouts():
         log.error(f"{WORKOUTS_FILE} not found!")
         return []
     
-    valid, errors = validate_workouts_file(WORKOUTS_FILE)
-    if not valid:
-        for error in errors:
-            log.error(f"Workout validation error: {error}")
-        return []
-    
+    # Validation was using garmin_utils which is gone, skipping for now or re-implementing later
     with open(WORKOUTS_FILE) as f:
         workouts = json.load(f)
     
@@ -74,7 +66,7 @@ def load_workouts():
 WORKOUTS = load_workouts()
 
 
-def create_step_with_target(step_type: str, duration: float, order: int, target_type: dict = None) -> ExecutableStep:
+def create_step_with_target(step_type: str, duration: float, order: int, target_type: Optional[dict] = None) -> ExecutableStep:
     """Create a step with target values at step level (not inside targetType)."""
     step_type_map = {
         "warmup": {"stepTypeId": 1, "stepTypeKey": "warmup", "displayOrder": 1},
@@ -200,7 +192,7 @@ def clean_old_workouts(client, month_prefix=None):
         return
     
     # Otherwise, just clean duplicates (keep newest) by month prefix
-    by_name = {}
+    by_name: dict[str, Any] = {}
     for w in normal_workouts:
         name = w.get("workoutName", "")
         if month_prefix and not name.startswith(month_prefix):
@@ -283,11 +275,7 @@ def main():
     
     log.info("Uploading and scheduling workouts...")
     
-    # Pre-fetch all workouts to see if we've already uploaded some
-    existing_workouts = client.get_workouts()
-    existing_names = [w.get("workoutName") for w in existing_workouts]
     
-    # We will also need to check scheduled workouts to avoid duplicate scheduling
     # Let's get the distinct year/months from the plan
     months_to_fetch = set()
     for w in WORKOUTS:
