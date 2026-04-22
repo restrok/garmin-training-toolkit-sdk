@@ -6,7 +6,7 @@ This project uses `uv` for modern, fast dependency management. Do not use legacy
 
 ```bash
 # 1. Navigate to project
-cd /path/to/garmin-training-toolkit-sdk
+cd /path/to/garmin-training-toolkit
 
 # 2. Sync dependencies (uv automatically creates the virtual environment)
 cd garmin_toolkit
@@ -28,7 +28,7 @@ uv run python3 ../example_ingestion.py
 ## Project Structure
 
 ```
-garmin-training-toolkit-sdk/
+garmin-training-toolkit/
 ├── garmin.py                 # Main CLI (Authentication only)
 ├── example_ingestion.py      # Example of how to use the SDK
 ├── garmin_toolkit/           # The core SDK Package

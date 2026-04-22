@@ -8,8 +8,8 @@ import logging
 import sys
 from pathlib import Path
 
-from garmin_training_toolkit_sdk.auth import browser_login, save_tokens
-from garmin_training_toolkit_sdk.utils import get_authenticated_client, find_token_file
+from garmin_toolkit.auth import browser_login, save_tokens
+from garmin_toolkit.utils import get_authenticated_client, find_token_file
 
 logging.basicConfig(
     level=logging.INFO,
@@ -26,7 +26,7 @@ def main():
     p_auth.add_argument("--headless", action="store_true", help="Run browser in background")
     
     # Extract Command
-    p_extract = sub.add_parser("extract", help="Extract raw data using the garmin_training_toolkit_sdk (Test)")
+    p_extract = sub.add_parser("extract", help="Extract raw data using the garmin_toolkit (Test)")
     
     args = parser.parse_args()
     
