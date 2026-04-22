@@ -1,6 +1,6 @@
 [project]
 name = "garmin-training-toolkit-sdk"
-version = "0.1.1"
+version = "0.1.2"
 description = "A robust, type-safe Python SDK for Garmin Connect data extraction."
 readme = "README.md"
 authors = [

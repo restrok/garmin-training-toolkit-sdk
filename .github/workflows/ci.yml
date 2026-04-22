@@ -54,6 +54,6 @@ jobs:
 
       - name: Build and Publish
         run: |
-          cd garmin_training_toolkit_sdk
+          cd garmin_toolkit
           uv build
           uv publish
