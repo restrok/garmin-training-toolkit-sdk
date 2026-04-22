@@ -74,5 +74,5 @@ garmin-workout-uploader/workouts.json
 *.backup
 
 
-*ai-infra*
-garmin_toolkit/
+garmin_toolkit/.venv/
+.interview_prep/
