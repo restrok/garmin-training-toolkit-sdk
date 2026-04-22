@@ -23,17 +23,17 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd garmin_training_toolkit_sdk
+          cd garmin_toolkit
           uv sync --all-extras --dev
 
       - name: Run Ruff
         run: |
-          cd garmin_training_toolkit_sdk
+          cd garmin_toolkit
           uv run ruff check src
 
       - name: Run Mypy
         run: |
-          cd garmin_training_toolkit_sdk
+          cd garmin_toolkit
           uv run mypy src
 
   publish:
