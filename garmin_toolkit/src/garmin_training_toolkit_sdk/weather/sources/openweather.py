@@ -1,7 +1,17 @@
+<<<<<<<< HEAD:garmin_toolkit/src/garmin_training_toolkit_sdk/weather/sources/openweather.py
 import requests  # type: ignore
 from datetime import datetime
 from garmin_training_toolkit_sdk.weather.storage.sqlite import db
 from garmin_training_toolkit_sdk.weather.sources.open_meteo import get_city_coords
+========
+import requests
+from datetime import datetime
+from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+from weather.storage.sqlite import db
+from weather.sources.open_meteo import get_city_coords
+>>>>>>>> origin/main:garmin_toolkit/src/garmin_toolkit/weather/sources/openweather.py
 
 CURRENT_URL = "https://api.open-meteo.com/v1/forecast"
 

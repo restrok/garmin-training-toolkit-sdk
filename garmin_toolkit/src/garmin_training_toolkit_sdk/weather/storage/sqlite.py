@@ -1,5 +1,12 @@
 import sqlite3
+<<<<<<<< HEAD:garmin_toolkit/src/garmin_training_toolkit_sdk/weather/storage/sqlite.py
 from garmin_training_toolkit_sdk.weather.config import config
+========
+from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+from weather.config import config
+>>>>>>>> origin/main:garmin_toolkit/src/garmin_toolkit/weather/storage/sqlite.py
 
 class WeatherDB:
     def __init__(self, db_path=None):
