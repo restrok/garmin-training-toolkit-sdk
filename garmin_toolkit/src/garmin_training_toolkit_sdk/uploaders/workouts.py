@@ -25,7 +25,12 @@ from ..utils import (
     get_authenticated_client,
     REQUEST_DELAY_MIN,
     REQUEST_DELAY_MAX,
+    pace_to_ms,
+    power_to_watts,
+    validate_workouts_file,
 )
+from ..models.workouts import WorkoutPlan, WorkoutTemplate
+from .calendar import clear_calendar_range, schedule_workout
 
 logging.basicConfig(
     level=logging.INFO,
@@ -55,19 +60,26 @@ def load_workouts():
         log.error(f"{WORKOUTS_FILE} not found!")
         return []
     
-    # Validation was using garmin_utils which is gone, skipping for now or re-implementing later
+    valid, errors = validate_workouts_file(WORKOUTS_FILE)
+    if not valid:
+        log.error(f"Validation errors in {WORKOUTS_FILE}:")
+        for err in errors:
+            log.error(f"  - {err}")
+        return []
+        
     with open(WORKOUTS_FILE) as f:
-        workouts = json.load(f)
+        data = json.load(f)
+        plan = WorkoutPlan(data)
     
-    log.info(f"Loaded {len(workouts)} workouts from {WORKOUTS_FILE}")
-    return workouts
+    log.info(f"Loaded {len(plan.root)} workouts from {WORKOUTS_FILE}")
+    return [w.model_dump() for w in plan.root]
 
 
 WORKOUTS = load_workouts()
 
 
-def create_step_with_target(step_type: str, duration: float, order: int, target_type: Optional[dict] = None) -> ExecutableStep:
-    """Create a step with target values at step level (not inside targetType)."""
+def create_step_with_target(step_type: str, duration: float, order: int, target: Optional[Any] = None) -> ExecutableStep:
+    """Create a step with target values at step level."""
     step_type_map = {
         "warmup": {"stepTypeId": 1, "stepTypeKey": "warmup", "displayOrder": 1},
         "cooldown": {"stepTypeId": 2, "stepTypeKey": "cooldown", "displayOrder": 2},
@@ -76,18 +88,38 @@ def create_step_with_target(step_type: str, duration: float, order: int, target_
         "recovery": {"stepTypeId": 3, "stepTypeKey": "interval", "displayOrder": 3},
     }
     
-    if target_type:
-        workout_target_type_id = target_type.get("workoutTargetTypeId", 1)
-        workout_target_type_key = target_type.get("workoutTargetTypeKey", "no.target")
-        display_order = target_type.get("displayOrder", 1)
-        target_value_one = target_type.get("targetValueOne")
-        target_value_two = target_type.get("targetValueTwo")
-    else:
-        workout_target_type_id = 1
-        workout_target_type_key = "no.target"
-        display_order = 1
-        target_value_one = None
-        target_value_two = None
+    target_value_one = None
+    target_value_two = None
+    workout_target_type_id = 1
+    workout_target_type_key = "no.target"
+    display_order = 1
+
+    if isinstance(target, str):
+        # Handle string targets (pace or power)
+        if ":" in target or "min/km" in target:
+            # Pace target: Garmin expects range for pace usually, but we can set it to +/- 5s
+            ms = pace_to_ms(target)
+            if ms > 0:
+                workout_target_type_id = 6 # Speed/Pace
+                workout_target_type_key = "speed.zone"
+                display_order = 6
+                # Create a small range around the target pace (approx +/- 2%)
+                target_value_one = ms * 0.98
+                target_value_two = ms * 1.02
+        elif target.endswith("W") or target.isdigit():
+            watts = power_to_watts(target)
+            if watts > 0:
+                workout_target_type_id = 2 # Power
+                workout_target_type_key = "power.zone"
+                display_order = 2
+                target_value_one = watts * 0.95
+                target_value_two = watts * 1.05
+    elif isinstance(target, dict):
+        workout_target_type_id = target.get("workoutTargetTypeId", 1)
+        workout_target_type_key = target.get("workoutTargetTypeKey", "no.target")
+        display_order = target.get("displayOrder", 1)
+        target_value_one = target.get("targetValueOne")
+        target_value_two = target.get("targetValueTwo")
     
     return ExecutableStep(
         stepOrder=order,
@@ -114,10 +146,12 @@ def create_workout(workout_data):
     steps = []
     order = 1
     
+    # workout_data is already a dict from model_dump()
     for step_data in workout_data["steps"]:
-        step_type = step_data[0]
-        duration = step_data[1]
-        target_type = step_data[2] if len(step_data) > 2 else None
+        # step_data is a dict if coming from Pydantic model_dump
+        step_type = step_data["type"]
+        duration = step_data["duration"]
+        target = step_data.get("target")
         
         if step_type == "warmup":
             steps.append(create_warmup_step(float(duration), order))
@@ -125,18 +159,13 @@ def create_workout(workout_data):
         elif step_type == "cooldown":
             steps.append(create_cooldown_step(float(duration), order))
             order += 1
-        elif step_type == "run":
-            steps.append(create_step_with_target(step_type, float(duration), order, target_type))
+        elif step_type in ["run", "interval", "recovery"]:
+            steps.append(create_step_with_target(step_type, float(duration), order, target))
             order += 1
-        elif step_type == "interval":
-            steps.append(create_step_with_target(step_type, float(duration), order, target_type))
-            order += 1
-            if duration > 0:
-                steps.append(create_recovery_step(float(duration) // 2, order))
-                order += 1
-        elif step_type == "recovery":
-            steps.append(create_recovery_step(float(duration), order))
-            order += 1
+            if step_type == "interval" and duration > 0:
+                 # Auto-recovery if it's an interval step and duration > 0? 
+                 # (Keeping original logic but maybe this should be explicit in template)
+                 pass
     
     return RunningWorkout(
         workoutName=workout_data["name"],
@@ -238,10 +267,11 @@ def main():
     import argparse
     
     parser = argparse.ArgumentParser(description="Garmin Workout Uploader")
-    parser.add_argument("--clean", metavar="MONTH", help="Remove old workouts (e.g., Apr, May, Jun)")
-    parser.add_argument("--clean-all", action="store_true", help="Remove ALL old plan workouts (no filter)")
-    parser.add_argument("--yes", action="store_true", help="Skip confirmation prompt for --clean")
-    parser.add_argument("--list", action="store_true", help="List all scheduled workouts")
+    parser.add_argument("--clean", metavar="MONTH", help="Remove old workouts by name prefix (e.g., Apr, May)")
+    parser.add_argument("--clean-all", action="store_true", help="Remove ALL normal workouts from library")
+    parser.add_argument("--clear-range", nargs=2, metavar=("START", "END"), help="Clear calendar range and delete workouts (YYYY-MM-DD)")
+    parser.add_argument("--yes", action="store_true", help="Skip confirmation prompt")
+    parser.add_argument("--list", action="store_true", help="List all workouts in library")
     parser.add_argument("--delete", metavar="ID", help="Delete a specific workout by ID")
     args = parser.parse_args()
     
@@ -250,10 +280,20 @@ def main():
     
     client = get_client()
     
+    if args.clear_range:
+        start, end = args.clear_range
+        if not args.yes:
+            resp = input(f"Delete ALL workouts from calendar and account between {start} and {end}? [y/N] ")
+            if resp.lower() != 'y':
+                log.info("Cancelled.")
+                return
+        clear_calendar_range(client, start, end)
+        return
+
     if args.clean or args.clean_all:
         prefix = None if args.clean_all else args.clean
         if not args.yes:
-            resp = input(f"Delete old workouts{' for ' + prefix if prefix else ''}? [y/N] ")
+            resp = input(f"Delete old workouts{' for ' + prefix if prefix else ''} from library? [y/N] ")
             if resp.lower() != 'y':
                 log.info("Cancelled.")
                 return
@@ -262,7 +302,7 @@ def main():
     
     if args.list:
         workouts = client.get_workouts()
-        log.info(f"{len(workouts)} total workouts:")
+        log.info(f"{len(workouts)} total workouts in library:")
         for w in sorted(workouts, key=lambda x: x.get("workoutName", "")):
             log.info(f"  {w.get('workoutName')} (ID: {w.get('workoutId')})")
         return
@@ -275,32 +315,29 @@ def main():
     
     log.info("Uploading and scheduling workouts...")
     
-    # Let's get the distinct year/months from the plan
+    # 1. Fetch current calendar to avoid duplicates
     months_to_fetch = set()
     for w in WORKOUTS:
         date_parts = w["date"].split("-")
         months_to_fetch.add((int(date_parts[0]), int(date_parts[1])))
     
-    scheduled_workouts = []
+    scheduled_dates = set()
     for year, month in months_to_fetch:
         try:
             cal = client.get_scheduled_workouts(year, month)
             if cal and "calendarItems" in cal:
-                scheduled_workouts.extend(cal["calendarItems"])
+                for item in cal["calendarItems"]:
+                    if item.get("itemType") == "workout":
+                        scheduled_dates.add(item.get("date"))
         except Exception as e:
             log.warning(f"Could not fetch calendar for {year}-{month}: {e}")
-    
-    scheduled_dates = set()
-    for item in scheduled_workouts:
-        # Check if it's a workout
-        if item.get("itemType") == "workout":
-            scheduled_dates.add(item.get("date"))
 
+    # 2. Upload and Schedule
     for i, workout_data in enumerate(WORKOUTS, 1):
         log.info(f"[{i}/{len(WORKOUTS)}] {workout_data['name']} on {workout_data['date']}")
         
         if workout_data["date"] in scheduled_dates:
-            log.info("Already scheduled on this date, skipping to resume gracefully...")
+            log.info("Already scheduled on this date, skipping.")
             continue
             
         try:
@@ -312,7 +349,7 @@ def main():
             
             time.sleep(REQUEST_DELAY_MIN + random.uniform(0, REQUEST_DELAY_MAX - REQUEST_DELAY_MIN))
             
-            client.schedule_workout(workout_id, workout_data["date"])
+            schedule_workout(client, workout_id, workout_data["date"])
             log.info("Scheduled")
             
             time.sleep(REQUEST_DELAY_MIN + random.uniform(0, REQUEST_DELAY_MAX - REQUEST_DELAY_MIN))

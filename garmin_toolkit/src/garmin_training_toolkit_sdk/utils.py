@@ -164,43 +164,50 @@ def save_tokens(tokens: dict, locations: Optional[list] = None):
             log.warning(f"Failed to save tokens to {loc}: {e}")
 
 
+import re
+from .models.workouts import WorkoutPlan
+
+def pace_to_ms(pace_str: str) -> float:
+    """
+    Convert a pace string (e.g., '5:30 min/km' or '5:30') to m/s.
+    Returns 0.0 if parsing fails.
+    """
+    try:
+        # Extract time part (handles '5:30 min/km', '5:30/km', '5:30')
+        match = re.search(r'(\d+):(\d+)', pace_str)
+        if not match:
+            return 0.0
+        
+        minutes = int(match.group(1))
+        seconds = int(match.group(2))
+        total_seconds_per_km = minutes * 60 + seconds
+        
+        if total_seconds_per_km == 0:
+            return 0.0
+            
+        return 1000.0 / total_seconds_per_km
+    except (ValueError, AttributeError):
+        return 0.0
+
+def power_to_watts(power_str: str) -> float:
+    """Convert power string (e.g., '250W', '250') to float watts."""
+    try:
+        return float(re.sub(r'[^\d.]', '', str(power_str)))
+    except ValueError:
+        return 0.0
+
 def validate_workout(workout: dict) -> tuple[bool, Optional[str]]:
-    """Validate a workout object from workouts.json."""
-    required_fields = ["name", "date", "description", "duration", "steps"]
-    
-    for field in required_fields:
-        if field not in workout:
-            return False, f"Missing required field: {field}"
-    
-    if not isinstance(workout["steps"], list):
-        return False, "Steps must be a list"
-    
-    if not workout["steps"]:
-        return False, "Workout must have at least one step"
-    
-    valid_step_types = {"warmup", "cooldown", "run", "interval", "recovery"}
-    
-    for i, step in enumerate(workout["steps"]):
-        if not isinstance(step, list):
-            return False, f"Step {i}: must be a list"
-        
-        if len(step) < 2:
-            return False, f"Step {i}: must have at least type and duration"
-        
-        step_type = step[0]
-        if step_type not in valid_step_types:
-            return False, f"Step {i}: invalid type '{step_type}'"
-        
-        try:
-            float(step[1])
-        except (ValueError, TypeError):
-            return False, f"Step {i}: duration must be a number"
-    
-    return True, None
+    """Validate a workout object using Pydantic."""
+    from .models.workouts import WorkoutTemplate
+    try:
+        WorkoutTemplate(**workout)
+        return True, None
+    except Exception as e:
+        return False, str(e)
 
 
 def validate_workouts_file(file_path: Path) -> tuple[bool, list]:
-    """Validate entire workouts.json file."""
+    """Validate entire workouts.json file using Pydantic."""
     errors = []
     
     if not file_path.exists():
@@ -208,18 +215,14 @@ def validate_workouts_file(file_path: Path) -> tuple[bool, list]:
         return False, errors
     
     try:
-        workouts = json.loads(file_path.read_text())
+        with open(file_path) as f:
+            data = json.load(f)
+        WorkoutPlan(data)
     except json.JSONDecodeError as e:
         errors.append(f"Invalid JSON: {e}")
         return False, errors
-    
-    if not isinstance(workouts, list):
-        errors.append("Root must be a list of workouts")
+    except Exception as e:
+        errors.append(f"Validation error: {e}")
         return False, errors
     
-    for i, workout in enumerate(workouts):
-        valid, error = validate_workout(workout)
-        if not valid:
-            errors.append(f"Workout {i} ('{workout.get('name', 'unknown')}'): {error}")
-    
-    return len(errors) == 0, errors
+    return True, []
