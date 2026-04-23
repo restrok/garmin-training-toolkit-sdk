@@ -70,8 +70,51 @@ All extractors return typed Pydantic models ensuring data reliability.
 *   `get_stress_data(client, date)`
 *   `get_training_status(client, date)`
 
-## Included Modules
+## Workout Management & Uploaders
 
-While the core focus is extraction, the SDK also bundles:
-*   **`garmin_training_toolkit_sdk.uploaders`**: Logic for uploading custom workout plans back to Garmin.
-*   **`garmin_training_toolkit_sdk.weather`**: A local SQLite-backed weather module (OpenMeteo) to enrich activity data with historical weather context.
+The SDK provides robust logic for managing your Garmin calendar and uploading custom workout plans.
+
+### 1. Uploading Workouts
+Supports "Triple Redundancy" targets (Pace/HR/Power) required by modern Garmin watches to display intensity targets correctly.
+
+```python
+from garmin_training_toolkit_sdk.uploaders.workouts import create_workout
+
+# 1. Create a workout dictionary (Triple Redundancy for Pace/HR targets)
+workout_data = {
+    "name": "Tempo Run",
+    "duration": 2400,
+    "steps": [
+        {"type": "warmup", "duration": 600},
+        {"type": "run", "duration": 1200, "target": "4:30 min/km"}
+    ]
+}
+workout_dict = create_workout(workout_data)
+
+# 2. Upload
+client.upload_workout(workout_dict)
+```
+
+### 2. Calendar Management
+Safely manage your schedule without affecting Garmin's "Auto Training Plans" (ATP).
+
+```python
+from garmin_training_toolkit_sdk.uploaders.calendar import clear_calendar_range, schedule_workout
+
+# Clear a specific range (Safely skips Garmin native plans)
+clear_calendar_range(client, "2026-05-01", "2026-05-31")
+
+# Schedule a workout
+schedule_workout(client, workout_id="12345", workout_date="2026-05-15")
+```
+
+## Testing & Mocks
+
+The SDK includes a `MockGarminClient` to allow consumers to test their pipelines without hitting Garmin's rate limits or production APIs.
+
+```python
+from garmin_training_toolkit_sdk.testing.mock import MockGarminClient
+
+mock_client = MockGarminClient()
+# Use mock_client exactly like a Garmin() instance
+```

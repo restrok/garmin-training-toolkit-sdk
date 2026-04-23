@@ -24,8 +24,8 @@ The SDK absorbs the complexity of Garmin's matrix telemetry arrays. The `get_act
 
 ### 3. "Batteries Included" (Read, Write, and Context)
 While `garminconnect` handles basic HTTP requests, this toolkit provides a unified domain-driven interface:
-*   **Extractors (Read):** Cleanly segregated by domain (`activities`, `biometrics`).
-*   **Uploaders (Write):** Abstracted logic for scheduling custom workout JSONs back to Garmin's calendar.
+*   **Extractors (Read):** Cleanly segregated by domain (`activities`, `biometrics`). Strictly typed.
+*   **Uploaders (Write - Strategic Bypass):** To support Garmin's legacy "Triple Redundancy" requirements for workout targets (where values must exist simultaneously at the top level, in `targetType`, and in a nested `zone` dictionary), the SDK utilizes raw dictionary construction for the **write path**. This prevents internal library filtering and ensures the watch receives the exact intensity targets needed for race-day visualization.
 *   **Weather (Context):** A bundled, local SQLite-backed OpenMeteo module to enrich workouts with historical weather data without relying on external cloud APIs.
 
 ## Conclusion
