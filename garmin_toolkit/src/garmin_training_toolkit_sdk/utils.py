@@ -8,10 +8,13 @@ import base64
 import json
 import logging
 import random
+import re
 import time
 from functools import wraps
 from pathlib import Path
 from typing import Optional
+
+from .models.workouts import WorkoutPlan
 
 logging.basicConfig(
     level=logging.INFO,
@@ -163,9 +166,6 @@ def save_tokens(tokens: dict, locations: Optional[list] = None):
         except Exception as e:
             log.warning(f"Failed to save tokens to {loc}: {e}")
 
-
-import re
-from .models.workouts import WorkoutPlan
 
 def pace_to_ms(pace_str: str) -> float:
     """

@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, date, timedelta
+from datetime import datetime, date
 from typing import Union
 
 log = logging.getLogger(__name__)

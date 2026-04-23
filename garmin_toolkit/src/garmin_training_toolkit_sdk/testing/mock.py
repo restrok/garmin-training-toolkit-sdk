@@ -1,5 +1,4 @@
-import logging
-from typing import Any, List, Optional
+from typing import Any, List
 from datetime import datetime
 
 class MockGarminClient:
