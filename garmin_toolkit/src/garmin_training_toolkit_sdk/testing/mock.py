@@ -11,6 +11,7 @@ class MockGarminClient:
         self.workouts = []
         self.scheduled_workouts = []
         self.deleted_workout_ids = []
+        self.unscheduled_item_ids = []
         self.uploaded_workouts = []
 
     def get_workouts(self) -> List[dict]:
@@ -22,27 +23,36 @@ class MockGarminClient:
         self.scheduled_workouts = [w for w in self.scheduled_workouts if str(w.get("workoutId")) != str(workout_id)]
         return True
 
-    def upload_running_workout(self, workout: Any) -> dict:
-        # workout is usually an object with workoutName etc.
+    def upload_workout(self, workout_dict: dict) -> dict:
         workout_id = str(len(self.uploaded_workouts) + 1000)
         workout_data = {
             "workoutId": workout_id,
-            "workoutName": getattr(workout, "workoutName", "Mock Workout"),
+            "workoutName": workout_dict.get("workoutName", "Mock Workout"),
         }
-        self.uploaded_workouts.append(workout_data)
+        self.uploaded_workouts.append(workout_dict)
         self.workouts.append(workout_data)
         return workout_data
+
+    def upload_running_workout(self, workout: Any) -> dict:
+        # Legacy/Compatibility
+        return self.upload_workout(getattr(workout, "__dict__", {}))
 
     def schedule_workout(self, workout_id: str, workout_date: str):
         # Check if workout exists
         workout = next((w for w in self.workouts if str(w.get("workoutId")) == str(workout_id)), None)
         item = {
             "workoutId": str(workout_id),
+            "calendarItemId": str(len(self.scheduled_workouts) + 5000),
             "date": workout_date,
             "itemType": "workout",
             "title": workout.get("workoutName") if workout else "Scheduled Workout"
         }
         self.scheduled_workouts.append(item)
+        return True
+
+    def unschedule_workout(self, calendar_item_id: str):
+        self.unscheduled_item_ids.append(str(calendar_item_id))
+        self.scheduled_workouts = [w for w in self.scheduled_workouts if str(w.get("calendarItemId")) != str(calendar_item_id)]
         return True
 
     def get_scheduled_workouts(self, year: int, month: int) -> dict:

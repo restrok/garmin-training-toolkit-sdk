@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Garmin Connect Workout Uploader with Cloudflare bypass
-Adds delays between login attempts and retries
+Returns raw dictionaries to prevent library-level Pydantic filtering of nested fields.
 """
 
 import json
@@ -9,16 +9,7 @@ import logging
 import random
 import time
 from pathlib import Path
-from typing import Any, Optional
-
-from garminconnect.workout import (
-    RunningWorkout,
-    WorkoutSegment,
-    ExecutableStep,
-    create_cooldown_step,
-    create_recovery_step,
-    create_warmup_step,
-)
+from typing import Any, Optional, Dict, List
 
 from ..utils import (
     find_token_file,
@@ -78,107 +69,130 @@ def load_workouts():
 WORKOUTS = load_workouts()
 
 
-def create_step_with_target(step_type: str, duration: float, order: int, target: Optional[Any] = None) -> ExecutableStep:
-    """Create a step with target values at step level."""
-    step_type_map = {
+def create_step(
+    step_order: int,
+    step_type_key: str,
+    duration_value: float,
+    target_type_id: int = 1,
+    target_type_key: str = "no.target",
+    target_value_one: Optional[float] = None,
+    target_value_two: Optional[float] = None,
+    description: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    Create a workout step as a raw dictionary.
+    Implements TRIPLE REDUNDANCY for targets as required by Garmin API.
+    """
+    step_types = {
         "warmup": {"stepTypeId": 1, "stepTypeKey": "warmup", "displayOrder": 1},
         "cooldown": {"stepTypeId": 2, "stepTypeKey": "cooldown", "displayOrder": 2},
         "run": {"stepTypeId": 3, "stepTypeKey": "interval", "displayOrder": 3},
         "interval": {"stepTypeId": 3, "stepTypeKey": "interval", "displayOrder": 3},
-        "recovery": {"stepTypeId": 3, "stepTypeKey": "interval", "displayOrder": 3},
+        "recovery": {"stepTypeId": 4, "stepTypeKey": "recovery", "displayOrder": 4},
     }
-    
-    target_value_one = None
-    target_value_two = None
-    workout_target_type_id = 1
-    workout_target_type_key = "no.target"
-    display_order = 1
 
-    if isinstance(target, str):
-        # Handle string targets (pace or power)
-        if ":" in target or "min/km" in target:
-            # Pace target: Garmin expects range for pace usually, but we can set it to +/- 5s
-            ms = pace_to_ms(target)
-            if ms > 0:
-                workout_target_type_id = 6 # Speed/Pace
-                workout_target_type_key = "speed.zone"
-                display_order = 6
-                # Create a small range around the target pace (approx +/- 2%)
-                target_value_one = ms * 0.98
-                target_value_two = ms * 1.02
-        elif target.endswith("W") or target.isdigit():
-            watts = power_to_watts(target)
-            if watts > 0:
-                workout_target_type_id = 2 # Power
-                workout_target_type_key = "power.zone"
-                display_order = 2
-                target_value_one = watts * 0.95
-                target_value_two = watts * 1.05
-    elif isinstance(target, dict):
-        workout_target_type_id = target.get("workoutTargetTypeId", 1)
-        workout_target_type_key = target.get("workoutTargetTypeKey", "no.target")
-        display_order = target.get("displayOrder", 1)
-        target_value_one = target.get("targetValueOne")
-        target_value_two = target.get("targetValueTwo")
+    step_type = step_types.get(step_type_key, step_types["run"])
     
-    return ExecutableStep(
-        stepOrder=order,
-        stepType=step_type_map.get(step_type, step_type_map["run"]),
-        endCondition={
+    step = {
+        "type": "ExecutableStepDTO",
+        "stepOrder": step_order,
+        "stepType": step_type,
+        "childStepId": None,
+        "description": description,
+        "endCondition": {
             "conditionTypeId": 2,
             "conditionTypeKey": "time",
             "displayOrder": 2,
             "displayable": True,
         },
-        endConditionValue=duration,
-        targetType={
-            "workoutTargetTypeId": workout_target_type_id,
-            "workoutTargetTypeKey": workout_target_type_key,
-            "displayOrder": display_order,
+        "endConditionValue": duration_value,
+        "targetType": {
+            "workoutTargetTypeId": target_type_id,
+            "workoutTargetTypeKey": target_type_key,
+            "displayOrder": target_type_id, # Usually matches ID or key order
+            "targetValueOne": target_value_one,
+            "targetValueTwo": target_value_two,
+            "zone": {"low": target_value_one, "high": target_value_two} if target_value_one is not None else None
         },
-        targetValueOne=target_value_one,
-        targetValueTwo=target_value_two,
+        "targetValueOne": target_value_one,
+        "targetValueTwo": target_value_two,
+    }
+    
+    return step
+
+
+def create_step_with_target(step_type: str, duration: float, order: int, target: Optional[Any] = None) -> Dict[str, Any]:
+    """Create a step with target values parsed from template."""
+    target_value_one = None
+    target_value_two = None
+    workout_target_type_id = 1
+    workout_target_type_key = "no.target"
+
+    if isinstance(target, str):
+        # Handle string targets (pace or power)
+        if ":" in target or "min/km" in target:
+            ms = pace_to_ms(target)
+            if ms > 0:
+                workout_target_type_id = 5 # speed.zone (pace)
+                workout_target_type_key = "speed.zone"
+                # +/- 2% range
+                target_value_one = round(ms * 0.98, 2)
+                target_value_two = round(ms * 1.02, 2)
+        elif target.endswith("W") or target.isdigit():
+            watts = power_to_watts(target)
+            if watts > 0:
+                workout_target_type_id = 2 # power.zone
+                workout_target_type_key = "power.zone"
+                target_value_one = round(watts * 0.95, 2)
+                target_value_two = round(watts * 1.05, 2)
+    elif isinstance(target, dict):
+        workout_target_type_id = target.get("workoutTargetTypeId", 1)
+        workout_target_type_key = target.get("workoutTargetTypeKey", "no.target")
+        target_value_one = target.get("targetValueOne")
+        target_value_two = target.get("targetValueTwo")
+    
+    return create_step(
+        step_order=order,
+        step_type_key=step_type,
+        duration_value=duration,
+        target_type_id=workout_target_type_id,
+        target_type_key=workout_target_type_key,
+        target_value_one=target_value_one,
+        target_value_two=target_value_two
     )
 
 
-def create_workout(workout_data):
-    """Create a RunningWorkout from workout data."""
+def create_workout(workout_data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Create a Garmin workout as a raw dictionary instead of an object.
+    This prevents the library from filtering out necessary fields like 'zone'.
+    """
     steps = []
     order = 1
     
-    # workout_data is already a dict from model_dump()
     for step_data in workout_data["steps"]:
-        # step_data is a dict if coming from Pydantic model_dump
         step_type = step_data["type"]
         duration = step_data["duration"]
         target = step_data.get("target")
         
-        if step_type == "warmup":
-            steps.append(create_warmup_step(float(duration), order))
-            order += 1
-        elif step_type == "cooldown":
-            steps.append(create_cooldown_step(float(duration), order))
-            order += 1
-        elif step_type in ["run", "interval", "recovery"]:
-            steps.append(create_step_with_target(step_type, float(duration), order, target))
-            order += 1
-            if step_type == "interval" and duration > 0:
-                 # Auto-recovery if it's an interval step and duration > 0? 
-                 # (Keeping original logic but maybe this should be explicit in template)
-                 pass
+        steps.append(create_step_with_target(step_type, float(duration), order, target))
+        order += 1
     
-    return RunningWorkout(
-        workoutName=workout_data["name"],
-        description=workout_data["description"],
-        estimatedDurationInSecs=workout_data["duration"],
-        workoutSegments=[
-            WorkoutSegment(
-                segmentOrder=1,
-                sportType={"sportTypeId": 1, "sportTypeKey": "running"},
-                workoutSteps=steps
-            )
+    workout = {
+        "workoutName": workout_data["name"],
+        "description": workout_data.get("description", ""),
+        "sportType": {"sportTypeId": 1, "sportTypeKey": "running"},
+        "estimatedDurationInSecs": workout_data.get("duration"),
+        "workoutSegments": [
+            {
+                "segmentOrder": 1,
+                "sportType": {"sportTypeId": 1, "sportTypeKey": "running"},
+                "workoutSteps": steps
+            }
         ]
-    )
+    }
+    
+    return workout
 
 
 def delete_workout(client, workout_id):
@@ -269,7 +283,7 @@ def main():
     parser = argparse.ArgumentParser(description="Garmin Workout Uploader")
     parser.add_argument("--clean", metavar="MONTH", help="Remove old workouts by name prefix (e.g., Apr, May)")
     parser.add_argument("--clean-all", action="store_true", help="Remove ALL normal workouts from library")
-    parser.add_argument("--clear-range", nargs=2, metavar=("START", "END"), help="Clear calendar range and delete workouts (YYYY-MM-DD)")
+    parser.add_argument("--clear-range", nargs=2, metavar=("START", "END"), help="Clear calendar range (YYYY-MM-DD)")
     parser.add_argument("--yes", action="store_true", help="Skip confirmation prompt")
     parser.add_argument("--list", action="store_true", help="List all workouts in library")
     parser.add_argument("--delete", metavar="ID", help="Delete a specific workout by ID")
@@ -283,7 +297,7 @@ def main():
     if args.clear_range:
         start, end = args.clear_range
         if not args.yes:
-            resp = input(f"Delete ALL workouts from calendar and account between {start} and {end}? [y/N] ")
+            resp = input(f"Unschedule ALL items from calendar between {start} and {end}? [y/N] ")
             if resp.lower() != 'y':
                 log.info("Cancelled.")
                 return
@@ -343,8 +357,9 @@ def main():
         try:
             workout = create_workout(workout_data)
             
-            result = client.upload_running_workout(workout)
-            workout_id = result.get("workoutId") or result[0].get("workoutId")
+            # Using raw dictionary upload
+            result = client.upload_workout(workout)
+            workout_id = result.get("workoutId")
             log.info(f"Uploaded (ID: {workout_id})")
             
             time.sleep(REQUEST_DELAY_MIN + random.uniform(0, REQUEST_DELAY_MAX - REQUEST_DELAY_MIN))
