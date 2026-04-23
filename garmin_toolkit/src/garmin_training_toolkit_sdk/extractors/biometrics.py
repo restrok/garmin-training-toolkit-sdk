@@ -111,16 +111,28 @@ def get_sleep_data(garmin_client, start_date: str, end_date: str) -> List[SleepD
                 
                 if dto:
                     log.info(f"Found sleep record for {date_str}")
+                    
+                    sleep_scores = dto.get("sleepScores", {})
+                    overall_score = sleep_scores.get("overall", {}).get("value")
+                    
+                    def to_int(val):
+                        if val is None:
+                            return None
+                        try:
+                            return int(val)
+                        except (ValueError, TypeError):
+                            return None
+
                     sleep_records.append(SleepData(
                         date=dto.get("calendarDate", date_str),
-                        start=dto.get("sleepStartTimestampGMT"),
-                        end=dto.get("sleepEndTimestampGMT"),
-                        duration_sec=dto.get("sleepTimeSeconds"),
-                        deep_sec=dto.get("deepSleepSeconds"),
-                        light_sec=dto.get("lightSleepSeconds"),
-                        rem_sec=dto.get("remSleepSeconds"),
-                        awake_sec=dto.get("awakeSleepSeconds"),
-                        quality=dto.get("sleepWindowConfirmationType")
+                        start=to_int(dto.get("sleepStartTimestampGMT")),
+                        end=to_int(dto.get("sleepEndTimestampGMT")),
+                        duration_sec=to_int(dto.get("sleepTimeSeconds")),
+                        deep_sec=to_int(dto.get("deepSleepSeconds")),
+                        light_sec=to_int(dto.get("lightSleepSeconds")),
+                        rem_sec=to_int(dto.get("remSleepSeconds")),
+                        awake_sec=to_int(dto.get("awakeSleepSeconds")),
+                        quality=to_int(overall_score)
                     ))
             except Exception:
                 pass

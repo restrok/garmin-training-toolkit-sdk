@@ -9,14 +9,14 @@ class HRVData(BaseModel):
 
 class SleepData(BaseModel):
     date: str
-    start: Optional[str] = None
-    end: Optional[str] = None
-    duration_sec: Optional[float] = None
-    deep_sec: Optional[float] = None
-    light_sec: Optional[float] = None
-    rem_sec: Optional[float] = None
-    awake_sec: Optional[float] = None
-    quality: Optional[str] = None
+    start: Optional[int] = None
+    end: Optional[int] = None
+    duration_sec: Optional[int] = None
+    deep_sec: Optional[int] = None
+    light_sec: Optional[int] = None
+    rem_sec: Optional[int] = None
+    awake_sec: Optional[int] = None
+    quality: Optional[int] = None
 
 class ReadinessData(BaseModel):
     date: str
