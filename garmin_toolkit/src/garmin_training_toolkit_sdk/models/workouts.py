@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, RootModel, field_validator
+from pydantic import BaseModel, RootModel, field_validator
 from typing import List, Optional, Union, Any, Dict
 
 class WorkoutTarget(BaseModel):

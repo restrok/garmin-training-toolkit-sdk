@@ -9,7 +9,7 @@ import logging
 import random
 import time
 from pathlib import Path
-from typing import Any, Optional, Dict, List
+from typing import Any, Optional, Dict
 
 from ..utils import (
     find_token_file,
@@ -20,7 +20,7 @@ from ..utils import (
     power_to_watts,
     validate_workouts_file,
 )
-from ..models.workouts import WorkoutPlan, WorkoutTemplate
+from ..models.workouts import WorkoutPlan
 from .calendar import clear_calendar_range, schedule_workout
 
 logging.basicConfig(
