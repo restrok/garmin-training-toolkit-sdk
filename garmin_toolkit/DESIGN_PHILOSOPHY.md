@@ -1,33 +1,35 @@
-# Design Philosophy: Why build an SDK over garminconnect?
+# Design Philosophy: The Agent-First SDK
 
-This document outlines the architectural decisions behind building the `garmin_training_toolkit_sdk` SDK instead of simply using the raw `garminconnect` Python library in our AI pipelines.
+This document outlines the architectural decisions behind the `garmin_training_toolkit_sdk`. The SDK is designed to be the "Standard Interface" for biometric data, specifically optimized for **Autonomous AI Agents** and **Data Lakehouses**.
 
-## The Problem with Raw API Wrappers
+## The Problem: Brand Complexity & LLM Hallucinations
 
-The `garminconnect` library is an excellent, low-level wrapper around Garmin's unofficial APIs. However, using it directly inside a Data Pipeline or an AI Agent (like LangGraph) introduces severe fragility:
+Biometric providers (Garmin, Suunto, Whoop) use proprietary, often cryptic APIs. For an AI Agent (like a Biometric Coach), these present two major hurdles:
+1.  **Cognitive Load:** An LLM shouldn't have to know that `targetValueOne` means `min_heart_rate`. This leads to hallucinations and incorrect tool calls.
+2.  **Vendor Lock-in:** Changing from Garmin to another brand usually requires refactoring the entire agent's tool-calling logic.
 
-1.  **Silent Failures (No Data Contracts):** `garminconnect` returns raw, nested JSON dictionaries. If Garmin silently changes an API response key from `"averageHR"` to `"avgHeartRate"`, the code using it will silently return `None`. This corrupts Vector Databases and causes AI models to hallucinate based on missing context.
-2.  **Telemetry Compression:** Garmin does not return telemetry (second-by-second data) as clean key-value pairs. It returns a complex matrix of `metricDescriptors` (indexes) and flat arrays of values to save bandwidth. Parsing this requires complex mapping logic.
-3.  **Coupling:** Mixing API-specific rate-limiting logic, token management, and JSON parsing directly into the reasoning loop of an AI agent violates the separation of concerns.
+## The Solution: LLM-Native & Provider Pattern
 
-## The Solution: `garmin_training_toolkit_sdk` SDK
+The `garmin_training_toolkit_sdk` acts as an **Anti-Corruption Layer** that hides brand-specific complexity behind a unified "Common Language."
 
-The `garmin_training_toolkit_sdk` acts as an anti-corruption layer (Data Connector) between Garmin's erratic API and our Enterprise AI Platform.
+### 1. LLM-Native Data Contracts (Semantic Pydantic)
+The SDK doesn't just return data; it returns data with **intent**. 
+*   **Semantic Naming:** We use `min_target` and `max_target`. These names are intuitive for LLMs, allowing them to map user intent (e.g., "Set a recovery pace of 6:00") directly to the schema.
+*   **Self-Documenting Schemas:** Every field in our `protocol/` package includes a `Field(description="...")`. When an agent inspects the tool, it receives a built-in manual on how to use it.
+*   **Strict Typing:** Using `Literal["heart.rate.zone", "speed.zone"]` ensures the agent sees exactly which strings are valid, eliminating guesswork.
 
-### 1. Strict Data Contracts (Pydantic)
-By wrapping all outputs in Pydantic models (e.g., `TrainingStatusData`, `ActivityTelemetry`), the SDK guarantees the schema. 
-*   **Fail Fast:** If Garmin changes their API structure, Pydantic throws a validation error immediately during extraction, rather than letting bad data quietly poison the Data Lake.
-*   **Developer Experience:** IDEs provide auto-completion (e.g., `status.vo2max` instead of `status.get("vo2MaxValue")`).
+### 2. The Provider Pattern (Vendor Agnostic)
+The SDK introduces the `BaseBiometricProvider` abstract interface.
+*   **Unified Interface:** Whether you are fetching telemetry or uploading a workout, the methods are identical regardless of the hardware.
+*   **The Tool Factory:** The `ToolFactory` can generate a set of tools from any provider. For an AI Agent, a "Garmin Tool" and a "Suunto Tool" will look identical, requiring zero changes to the agent's logic.
 
-### 2. The Telemetry "Decompressor"
-The SDK absorbs the complexity of Garmin's matrix telemetry arrays. The `get_activity_telemetry` extractor automatically decodes the `metricDescriptors` and returns a flat, clean list of `ActivityTelemetryPoint` objects, instantly ready to be converted into Parquet files or pandas DataFrames.
+### 3. Protocol over Models
+We renamed the `models/` package to `protocol/`. This signifies that these are not just data structures, but a **shared communication protocol**. Any biometric data, regardless of source, is translated into this protocol before reaching the consumer.
 
-### 3. "Batteries Included" (Read, Write, and Context)
-While `garminconnect` handles basic HTTP requests, this toolkit provides a unified domain-driven interface:
-*   **Extractors (Read):** Cleanly segregated by domain (`activities`, `biometrics`). Strictly typed.
-*   **Uploaders (Write - Strategic Bypass):** To support Garmin's legacy "Triple Redundancy" requirements for workout targets (where values must exist simultaneously at the top level, in `targetType`, and in a nested `zone` dictionary), the SDK utilizes raw dictionary construction for the **write path**. This prevents internal library filtering and ensures the watch receives the exact intensity targets needed for race-day visualization.
-*   **Weather (Context):** A bundled, local SQLite-backed OpenMeteo module to enrich workouts with historical weather data without relying on external cloud APIs.
+### 4. Robustness & Verification
+*   **Fail Fast:** Pydantic validation ensures that bad data from a provider is caught at the source.
+*   **Triple Redundancy:** For complex operations like Garmin workout uploads, the SDK handles the intricate JSON requirements (targets, zones, IDs) internally, exposing only a clean interface to the agent.
 
 ## Conclusion
 
-In a modern Data/AI architecture, `garminconnect` is simply the HTTP transport layer. The `garmin_training_toolkit_sdk` is the actual **Data Product**—providing clean, reliable, and strictly typed data contracts that external AI systems can blindly trust.
+In a world of autonomous agents, an SDK is more than just an API wrapper—it's a **Translator**. The `garmin_training_toolkit_sdk` provides the clean, reliable, and semantically rich "Common Language" that AI systems need to interact with the physical world of biometrics.

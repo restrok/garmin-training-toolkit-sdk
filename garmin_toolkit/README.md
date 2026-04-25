@@ -1,127 +1,96 @@
 # Garmin Training Toolkit SDK
 
-A robust, type-safe Python SDK for extracting biometric data and telemetry from Garmin Connect.
+A robust, type-safe Python SDK for extracting biometric data and telemetry from Garmin Connect, optimized for autonomous agents and LLM tool-calling.
 
-## Purpose
+## Architecture: LLM-Native & Vendor-Agnostic
 
-This toolkit is designed as a raw data connector. It handles authentication, rate limiting, and data extraction from Garmin's unofficial APIs, returning clean, typed Pydantic models. It is built to be consumed by external Data Pipelines (like a Data Lakehouse) or AI systems (like LangGraph).
-
-**Note:** This repository is strictly an SDK. It does not contain AI logic, training plan generators, or an API server (FastAPI).
+The SDK has been refactored to prioritize:
+1.  **Semantic Naming:** No more cryptic Garmin fields. We use `min_target`, `max_target`, and `target_type`.
+2.  **Provider Pattern:** Logic is decoupled from Garmin-specific APIs. You can now use a standardized `BaseBiometricProvider` interface.
+3.  **Agent-First Schema:** Pydantic models include exhaustive descriptions and `Literal` types, allowing LLMs to understand the tool requirements with 100% accuracy from the JSON schema alone.
 
 ## Installation
 
 This project uses `uv` for dependency management.
 
 ```bash
-# In your consumer project (if using uv):
-uv add git+https://github.com/restrok/garmin-training-toolkit-sdk.git#subdirectory=garmin_training_toolkit_sdk
-```
-
-*Or for local development within this repository:*
-```bash
-cd garmin_training_toolkit_sdk
-uv sync
+# In your consumer project:
+uv add git+https://github.com/restrok/garmin-training-toolkit-sdk.git#subdirectory=garmin_toolkit
 ```
 
 ## Quick Start
 
-### 1. Authentication
-Garmin uses session tokens. To log in and cache your session locally:
+### 1. Standardized Provider Interface
 
-```bash
-# Runs a headless browser to authenticate and save tokens
-python3 garmin.py auth
-```
-
-### 2. Extracting Data (Python Example)
+The recommended way to use the SDK is via the `GarminProvider`.
 
 ```python
-import json
-from garmin_training_toolkit_sdk.utils import get_authenticated_client, find_token_file
-from garmin_training_toolkit_sdk.extractors import get_activities, get_activity_telemetry
+from datetime import date
+from garmin_training_toolkit_sdk.core.garmin import GarminProvider
 
-# 1. Connect
-token_file = find_token_file()
-client = get_authenticated_client(token_file)
+# 1. Initialize (automatically finds local tokens)
+provider = GarminProvider()
 
-# 2. Extract Activity Summary (Pydantic model)
-activities = get_activities(client, "2026-04-10", "2026-04-20")
+# 2. Fetch Activities (Returns vendor-agnostic Protocol models)
+activities = provider.get_activities(date(2026, 4, 1), date(2026, 4, 30))
 latest = activities[0]
-print(f"Latest run: {latest.name} ({latest.distance_m} meters)")
+print(f"Activity: {latest.name} | Distance: {latest.distance_m}m")
 
-# 3. Extract Detailed Telemetry (Second-by-second data)
-telemetry = get_activity_telemetry(client, latest.id)
-print(f"Total ticks: {telemetry.metric_count}")
-
-# Pydantic makes serialization easy
-print(json.dumps(telemetry.ticks[0].model_dump(), indent=2))
+# 3. Get Telemetry
+telemetry = provider.get_telemetry(latest.id)
+print(f"Sample HR: {telemetry.ticks[0].hr_bpm} bpm")
 ```
 
-## Available Extractors
+### 2. LLM-Native Workouts (Agent Friendly)
 
-All extractors return typed Pydantic models ensuring data reliability.
-
-*   `get_activities(client, start_date, end_date)`
-*   `get_activity_telemetry(client, activity_id)` -> Second-by-second telemetry (GPS, HR, Power, etc).
-*   `get_hrv_data(client, start_date, end_date)`
-*   `get_sleep_data(client, start_date, end_date)`
-*   `get_readiness_data(client, date)`
-*   `get_body_battery(client, date)`
-*   `get_stress_data(client, date)`
-*   `get_training_status(client, date)`
-
-## Workout Management & Uploaders
-
-The SDK provides robust logic for managing your Garmin calendar and uploading custom workout plans.
-
-### 1. Uploading Workouts
-Supports "Triple Redundancy" targets (Pace/HR/Power) required by modern Garmin watches to display intensity targets correctly.
-
-The SDK includes a `load_workouts()` utility in `garmin_training_toolkit_sdk.uploaders.workouts`. To prevent pipeline noise, it returns an empty list `[]` if the internal `workouts.json` is missing.
+Agents can create workouts using semantic naming or high-level helpers.
 
 ```python
-from garmin_training_toolkit_sdk.uploaders.workouts import create_workout, load_workouts
+from garmin_training_toolkit_sdk.protocol.workouts import create_simple_hr_workout
 
-# 1. Load workouts (gracefully handles missing workouts.json)
-workouts = load_workouts()
+# High-level helper for Agents
+workout = create_simple_hr_workout(
+    name="Z2 Recovery Run",
+    date="2026-05-01",
+    bpm_min=135,
+    bpm_max=145,
+    duration_mins=45
+)
 
-# 2. Create a workout dictionary (Triple Redundancy for Pace/HR targets)
-workout_data = {
-    "name": "Tempo Run",
-    "duration": 2400,
-    "steps": [
-        {"type": "warmup", "duration": 600},
-        {"type": "run", "duration": 1200, "target": "4:30 min/km"}
-    ]
-}
-workout_dict = create_workout(workout_data)
-
-# 3. Upload
-client.upload_workout(workout_dict)
+# Upload via the provider
+report = provider.upload_training_plan(workout)
+print(f"Status: {report.message}")
 ```
 
-### 2. Calendar Management
-Safely manage your schedule without affecting Garmin's "Auto Training Plans" (ATP).
+## Tool Factory (For AI Agents)
+
+If you are building an AI Agent (LangChain, AutoGPT, etc.), you can use the `ToolFactory` to generate a standardized set of tools from any provider.
 
 ```python
-from garmin_training_toolkit_sdk.uploaders.calendar import clear_calendar_range, schedule_workout
+from garmin_training_toolkit_sdk.core.factory import ToolFactory
+from garmin_training_toolkit_sdk.core.garmin import GarminProvider
 
-# Clear a specific range (Safely skips Garmin native plans)
-# Returns the integer count of successfully cleared items.
-cleared_count = clear_calendar_range(client, "2026-05-01", "2026-05-31")
-print(f"Removed {cleared_count} items from calendar.")
+provider = GarminProvider()
+tools = ToolFactory.create_tools(provider)
 
-# Schedule a workout
-schedule_workout(client, workout_id="12345", workout_date="2026-05-15")
+# These tools have semantic descriptions that LLMs love:
+# - get_activities
+# - get_telemetry
+# - upload_training_plan
 ```
+
+## Directory Structure
+
+*   `core/`: Provider implementations (Garmin, etc.) and the Tool Factory.
+*   `protocol/`: Vendor-agnostic Pydantic models (Activity, Telemetry, Workout).
+*   `extractors/`: Low-level data extraction logic.
+*   `uploaders/`: Logic for calendar and workout management.
 
 ## Testing & Mocks
 
-The SDK includes a `MockGarminClient` to allow consumers to test their pipelines without hitting Garmin's rate limits or production APIs.
+The SDK includes a `MockGarminClient` in `testing/mock.py` to allow consumers to test their pipelines without hitting Garmin's production APIs.
 
 ```python
 from garmin_training_toolkit_sdk.testing.mock import MockGarminClient
-
-mock_client = MockGarminClient()
-# Use mock_client exactly like a Garmin() instance
+# Use in your unit tests to avoid rate limits
 ```
