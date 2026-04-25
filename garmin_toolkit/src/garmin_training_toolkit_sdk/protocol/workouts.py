@@ -1,5 +1,5 @@
 from pydantic import BaseModel, RootModel, field_validator, Field, ConfigDict
-from typing import List, Optional, Union, Any, Dict, Literal, Sequence
+from typing import Optional, Union, Any, Dict, Literal, Sequence
 
 class WorkoutTarget(BaseModel):
     """
