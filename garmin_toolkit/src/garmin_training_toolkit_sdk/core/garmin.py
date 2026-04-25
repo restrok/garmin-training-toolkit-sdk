@@ -28,11 +28,8 @@ class GarminProvider(BaseBiometricProvider):
 
     def get_activities(self, start_date: date, end_date: date) -> List[Activity]:
         """Fetch activities from Garmin Connect."""
-        # The extractor expects start and end as integers (usually 0 to limit) 
-        # but let's assume we want to support date-based filtering if possible.
-        # Current extractor: get_activities(client, start=0, limit=20)
-        # For now, we'll fetch the latest and filter by date.
-        all_raw = fetch_activities(self.client, limit=50)
+        # Current extractor: get_activities(client, start_date_str, end_date_str, limit=20)
+        all_raw = fetch_activities(self.client, start_date.isoformat(), end_date.isoformat(), limit=50)
         filtered = []
         for act in all_raw:
             if start_date <= act.date.date() <= end_date:
@@ -41,7 +38,7 @@ class GarminProvider(BaseBiometricProvider):
 
     def get_telemetry(self, activity_id: str) -> ActivityTelemetry:
         """Fetch telemetry for a Garmin activity."""
-        return get_activity_telemetry(self.client, activity_id)
+        return get_activity_telemetry(self.client, int(activity_id))
 
     def upload_training_plan(self, plan: WorkoutPlan) -> SuccessReport:
         """Upload and schedule workouts from a plan."""

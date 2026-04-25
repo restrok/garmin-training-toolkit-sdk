@@ -1,5 +1,5 @@
 from pydantic import BaseModel, RootModel, field_validator, Field, ConfigDict
-from typing import List, Optional, Union, Any, Dict, Literal
+from typing import List, Optional, Union, Any, Dict, Literal, Sequence
 
 class WorkoutTarget(BaseModel):
     """
@@ -76,7 +76,7 @@ class WorkoutTemplate(BaseModel):
     date: str = Field(
         description="The scheduled date in YYYY-MM-DD format."
     )
-    steps: List[Union[WorkoutStep, list]] = Field(
+    steps: Sequence[Union[WorkoutStep, list]] = Field(
         description="List of workout steps to perform in sequence."
     )
 
@@ -92,7 +92,7 @@ class WorkoutTemplate(BaseModel):
         return processed_steps
 
 class WorkoutPlan(RootModel):
-    root: List[WorkoutTemplate]
+    root: Sequence[WorkoutTemplate]
 
 # Helper / Quick Start Functions
 
@@ -108,9 +108,9 @@ def create_simple_hr_workout(name: str, date: str, bpm_min: int, bpm_max: int, d
         type="run", 
         duration=duration_mins,
         target=WorkoutTarget(
-            target_type="heart.rate.zone",
-            min_target=float(bpm_min),
-            max_target=float(bpm_max)
+            workoutTargetTypeKey="heart.rate.zone",
+            targetValueOne=float(bpm_min),
+            targetValueTwo=float(bpm_max)
         )
     ))
 

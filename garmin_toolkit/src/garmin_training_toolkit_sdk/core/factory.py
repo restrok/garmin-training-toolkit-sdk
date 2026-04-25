@@ -1,7 +1,5 @@
-from typing import List, Any, Callable
+from typing import List, Callable
 from .base import BaseBiometricProvider
-from datetime import date
-from ..protocol.workouts import WorkoutPlan
 
 class ProviderTool:
     """
