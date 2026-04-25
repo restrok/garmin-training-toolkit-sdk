@@ -48,7 +48,7 @@ def get_client():
 def load_workouts():
     """Load and validate workouts from JSON file."""
     if not WORKOUTS_FILE.exists():
-        log.error(f"{WORKOUTS_FILE} not found!")
+        log.debug(f"{WORKOUTS_FILE} not found (skipping load)")
         return []
     
     valid, errors = validate_workouts_file(WORKOUTS_FILE)
