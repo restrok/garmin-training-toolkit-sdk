@@ -1,7 +1,7 @@
 import logging
 from typing import List
-from ..models.activities import Activity, ActivitySplit
-from ..models.telemetry import ActivityTelemetry, ActivityTelemetryPoint
+from ..protocol.activities import Activity, ActivitySplit
+from ..protocol.telemetry import ActivityTelemetry, ActivityTelemetryPoint
 
 log = logging.getLogger(__name__)
 
@@ -88,10 +88,13 @@ def get_activity_splits(client, activity_id: int) -> List[ActivitySplit]:
         log.warning(f"Failed to get splits for {activity_id}: {e}")
     return []
 
-def get_activities(client, start_date: str, end_date: str) -> List[Activity]:
+def get_activities(client, start_date: str, end_date: str, limit: int = 20) -> List[Activity]:
     """Fetch activities within a date range."""
     activities = []
     try:
+        # Note: Garmin API usually uses start and limit for this endpoint
+        # if using get_activities. If using by date, we might need a different client method.
+        # For now, let's keep it consistent with how it's being called.
         raw_activities = client.get_activities_by_date(start_date, end_date)
         for a in raw_activities:
             activity_date = a.get("startTimeLocal", "")

@@ -20,7 +20,7 @@ from ..utils import (
     power_to_watts,
     validate_workouts_file,
 )
-from ..models.workouts import WorkoutPlan
+from ..protocol.workouts import WorkoutPlan
 from .calendar import clear_calendar_range, schedule_workout
 
 logging.basicConfig(
@@ -138,6 +138,13 @@ def create_step_with_target(step_type: str, duration: float, order: int, target:
                 # +/- 2% range
                 target_value_one = round(ms * 0.98, 2)
                 target_value_two = round(ms * 1.02, 2)
+        elif "-" in target and all(p.isdigit() for p in target.split("-")):
+            # Handle HR range string "140-150"
+            parts = target.split("-")
+            workout_target_type_id = 4 # heart.rate.zone
+            workout_target_type_key = "heart.rate.zone"
+            target_value_one = float(parts[0])
+            target_value_two = float(parts[1])
         elif target.endswith("W") or target.isdigit():
             watts = power_to_watts(target)
             if watts > 0:
@@ -146,10 +153,23 @@ def create_step_with_target(step_type: str, duration: float, order: int, target:
                 target_value_one = round(watts * 0.95, 2)
                 target_value_two = round(watts * 1.05, 2)
     elif isinstance(target, dict):
-        workout_target_type_id = target.get("workoutTargetTypeId", 1)
-        workout_target_type_key = target.get("workoutTargetTypeKey", "no.target")
-        target_value_one = target.get("targetValueOne")
-        target_value_two = target.get("targetValueTwo")
+        # Handle both Garmin-raw keys and our new Semantic keys
+        target_type = target.get("target_type") or target.get("workoutTargetTypeKey", "no.target")
+        
+        # ID Mapping
+        type_to_id = {
+            "no.target": 1,
+            "power.zone": 2,
+            "heart.rate.zone": 4,
+            "speed.zone": 5,
+            "cadence.zone": 6
+        }
+        
+        workout_target_type_key = target_type
+        workout_target_type_id = target.get("target_type_id") or target.get("workoutTargetTypeId") or type_to_id.get(target_type, 1)
+        
+        target_value_one = target.get("min_target") or target.get("targetValueOne")
+        target_value_two = target.get("max_target") or target.get("targetValueTwo")
     
     return create_step(
         step_order=order,
