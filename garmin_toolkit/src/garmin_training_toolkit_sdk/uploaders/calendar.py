@@ -11,11 +11,13 @@ def schedule_workout(client, workout_id: str, workout_date: Union[str, date]):
     log.info(f"Scheduling workout {workout_id} on {workout_date}")
     return client.schedule_workout(workout_id, workout_date)
 
-def clear_calendar_range(client, start_date: Union[str, date], end_date: Union[str, date]):
+def clear_calendar_range(client, start_date: Union[str, date], end_date: Union[str, date]) -> int:
     """
     Fetch all scheduled workouts between start_date and end_date (inclusive)
     and unschedule them.
     
+    Returns the integer count of successfully cleared items.
+
     Safeguard: Skips any items containing an atpPlanId (Auto Training Plan) 
     as these cause 403/404 errors.
     """
@@ -69,15 +71,24 @@ def clear_calendar_range(client, start_date: Union[str, date], end_date: Union[s
 
     if not to_unschedule:
         log.info("No items found to clear in this range.")
-        return
+        return 0
 
     log.info(f"Unscheduling {len(to_unschedule)} items...")
+    cleared_count = 0
     for item in to_unschedule:
-        calendar_item_id = item.get("calendarItemId")
+        calendar_item_id = item.get("calendarItemId") or item.get("id")
         title = item.get("title")
         item_date = item.get("date")
+        
+        if not calendar_item_id:
+            log.warning(f"Could not find ID for item '{title}' on {item_date}, skipping.")
+            continue
+
         log.info(f"Unscheduling: {title} on {item_date} (ID: {calendar_item_id})")
         try:
             client.unschedule_workout(calendar_item_id)
+            cleared_count += 1
         except Exception as e:
             log.error(f"Failed to unschedule item {calendar_item_id}: {e}")
+            
+    return cleared_count
