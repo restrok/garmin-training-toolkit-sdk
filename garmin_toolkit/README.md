@@ -77,10 +77,15 @@ The SDK provides robust logic for managing your Garmin calendar and uploading cu
 ### 1. Uploading Workouts
 Supports "Triple Redundancy" targets (Pace/HR/Power) required by modern Garmin watches to display intensity targets correctly.
 
-```python
-from garmin_training_toolkit_sdk.uploaders.workouts import create_workout
+The SDK includes a `load_workouts()` utility in `garmin_training_toolkit_sdk.uploaders.workouts`. To prevent pipeline noise, it returns an empty list `[]` if the internal `workouts.json` is missing.
 
-# 1. Create a workout dictionary (Triple Redundancy for Pace/HR targets)
+```python
+from garmin_training_toolkit_sdk.uploaders.workouts import create_workout, load_workouts
+
+# 1. Load workouts (gracefully handles missing workouts.json)
+workouts = load_workouts()
+
+# 2. Create a workout dictionary (Triple Redundancy for Pace/HR targets)
 workout_data = {
     "name": "Tempo Run",
     "duration": 2400,
@@ -91,7 +96,7 @@ workout_data = {
 }
 workout_dict = create_workout(workout_data)
 
-# 2. Upload
+# 3. Upload
 client.upload_workout(workout_dict)
 ```
 
@@ -102,7 +107,9 @@ Safely manage your schedule without affecting Garmin's "Auto Training Plans" (AT
 from garmin_training_toolkit_sdk.uploaders.calendar import clear_calendar_range, schedule_workout
 
 # Clear a specific range (Safely skips Garmin native plans)
-clear_calendar_range(client, "2026-05-01", "2026-05-31")
+# Returns the integer count of successfully cleared items.
+cleared_count = clear_calendar_range(client, "2026-05-01", "2026-05-31")
+print(f"Removed {cleared_count} items from calendar.")
 
 # Schedule a workout
 schedule_workout(client, workout_id="12345", workout_date="2026-05-15")
