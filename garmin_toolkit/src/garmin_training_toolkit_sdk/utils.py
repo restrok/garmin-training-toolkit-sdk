@@ -24,7 +24,6 @@ log = logging.getLogger(__name__)
 
 TOKEN_LOCATIONS = [
     Path.home() / ".garminconnect" / "garmin_tokens.json",
-    Path.home() / ".garminconnect",
     Path(__file__).parent.parent / "garmin_tokens.json",
     Path(__file__).parent.parent.parent / "garmin_tokens.json",
     Path(__file__).parent.parent.parent.parent / "garmin_tokens.json",
