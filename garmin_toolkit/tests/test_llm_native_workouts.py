@@ -1,5 +1,5 @@
 import pytest
-from garmin_training_toolkit_sdk.models.workouts import (
+from garmin_training_toolkit_sdk.protocol.workouts import (
     WorkoutTarget, 
     WorkoutStep, 
     WorkoutTemplate,

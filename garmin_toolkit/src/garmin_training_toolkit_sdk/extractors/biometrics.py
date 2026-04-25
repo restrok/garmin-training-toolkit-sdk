@@ -1,7 +1,7 @@
 import logging
 from typing import List, Optional
-from ..models.biometrics import HRVData, SleepData, ReadinessData, BodyBatteryData, StressData, TrainingStatusData
-from ..models.user import UserProfile, BodyComposition
+from ..protocol.biometrics import HRVData, SleepData, ReadinessData, BodyBatteryData, StressData, TrainingStatusData
+from ..protocol.user import UserProfile, BodyComposition
 
 log = logging.getLogger(__name__)
 

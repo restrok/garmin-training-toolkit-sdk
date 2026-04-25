@@ -20,7 +20,7 @@ from ..utils import (
     power_to_watts,
     validate_workouts_file,
 )
-from ..models.workouts import WorkoutPlan
+from ..protocol.workouts import WorkoutPlan
 from .calendar import clear_calendar_range, schedule_workout
 
 logging.basicConfig(

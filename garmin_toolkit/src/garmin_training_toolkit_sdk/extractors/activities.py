@@ -1,7 +1,7 @@
 import logging
 from typing import List
-from ..models.activities import Activity, ActivitySplit
-from ..models.telemetry import ActivityTelemetry, ActivityTelemetryPoint
+from ..protocol.activities import Activity, ActivitySplit
+from ..protocol.telemetry import ActivityTelemetry, ActivityTelemetryPoint
 
 log = logging.getLogger(__name__)
 

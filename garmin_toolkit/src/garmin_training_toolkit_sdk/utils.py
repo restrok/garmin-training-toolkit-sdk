@@ -14,7 +14,7 @@ from functools import wraps
 from pathlib import Path
 from typing import Optional
 
-from .models.workouts import WorkoutPlan
+from .protocol.workouts import WorkoutPlan
 
 logging.basicConfig(
     level=logging.INFO,
@@ -198,7 +198,7 @@ def power_to_watts(power_str: str) -> float:
 
 def validate_workout(workout: dict) -> tuple[bool, Optional[str]]:
     """Validate a workout object using Pydantic."""
-    from .models.workouts import WorkoutTemplate
+    from .protocol.workouts import WorkoutTemplate
     try:
         WorkoutTemplate(**workout)
         return True, None
