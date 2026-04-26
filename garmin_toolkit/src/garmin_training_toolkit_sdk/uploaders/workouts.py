@@ -112,12 +112,10 @@ def create_step(
             "workoutTargetTypeId": target_type_id,
             "workoutTargetTypeKey": target_type_key,
             "displayOrder": target_type_id, # Usually matches ID or key order
-            "targetValueOne": target_value_one,
-            "targetValueTwo": target_value_two,
-            "zone": {"low": target_value_one, "high": target_value_two} if target_value_one is not None else None
         },
         "targetValueOne": target_value_one,
         "targetValueTwo": target_value_two,
+        "zone": {"low": target_value_one, "high": target_value_two} if target_value_one is not None else None
     }
     
     return step
@@ -128,7 +126,7 @@ def create_step_with_target(step_data: Dict[str, Any], order: int) -> Dict[str, 
     step_type = step_data["type"]
     target = step_data.get("target")
     
-    # Handle Durations
+    # Handle Durations (Convert Minutes to Seconds)
     duration_value = 0.0
     condition_type_key = "time"
     condition_type_id = 2
@@ -138,9 +136,9 @@ def create_step_with_target(step_data: Dict[str, Any], order: int) -> Dict[str, 
         condition_type_key = "distance"
         condition_type_id = 3
     elif step_data.get("duration_mins") is not None:
-        duration_value = float(step_data["duration_mins"])
+        duration_value = float(step_data["duration_mins"]) * 60
     elif step_data.get("duration") is not None:
-        duration_value = float(step_data["duration"])
+        duration_value = float(step_data["duration"]) * 60
 
     target_value_one = None
     target_value_two = None
@@ -247,8 +245,22 @@ def create_workout(workout_data: Dict[str, Any]) -> Dict[str, Any]:
                 "stepType": {"stepTypeId": 6, "stepTypeKey": "repeat", "displayOrder": 6},
                 "childStepId": None,
                 "numberOfIterations": step_data["iterations"],
-                "workoutSteps": repeat_steps,
-                "smartRepeat": False
+                "repeatChildSteps": repeat_steps,  # Must be repeatChildSteps
+                "smartRepeat": False,
+                "endCondition": {
+                    "conditionTypeId": 1,
+                    "conditionTypeKey": "iterations",
+                    "displayOrder": 1,
+                    "displayable": True,
+                },
+                "endConditionValue": step_data["iterations"],
+                "targetType": {
+                    "workoutTargetTypeId": 1,
+                    "workoutTargetTypeKey": "no.target",
+                    "displayOrder": 1,
+                },
+                "targetValueOne": None,
+                "targetValueTwo": None,
             })
         else:
             steps.append(create_step_with_target(step_data, current_order))

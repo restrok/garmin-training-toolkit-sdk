@@ -32,7 +32,7 @@ def test_explicit_target_models():
     step = WorkoutStep(type="run", duration_mins=30, target=hr)
     payload = create_step_with_target(step.model_dump(), 1)
     assert payload["targetType"]["workoutTargetTypeKey"] == "heart.rate.zone"
-    assert payload["targetType"]["targetValueOne"] == 140
+    assert payload["targetValueOne"] == 140
     
     # Pace Target
     pace = PaceTarget(min_pace_seconds=300, max_pace_seconds=320) # 5:00 to 5:20
@@ -40,15 +40,15 @@ def test_explicit_target_models():
     payload = create_step_with_target(step.model_dump(), 1)
     assert payload["targetType"]["workoutTargetTypeKey"] == "speed.zone"
     # 1000/320 = 3.125 -> 3.12 (Python round to even), 1000/300 = 3.333 -> 3.33
-    assert payload["targetType"]["targetValueOne"] == 3.12
-    assert payload["targetType"]["targetValueTwo"] == 3.33
+    assert payload["targetValueOne"] == 3.12
+    assert payload["targetValueTwo"] == 3.33
     
     # Power Target
     power = PowerTarget(min_watts=200, max_watts=250)
     step = WorkoutStep(type="run", duration_mins=30, target=power)
     payload = create_step_with_target(step.model_dump(), 1)
     assert payload["targetType"]["workoutTargetTypeKey"] == "power.zone"
-    assert payload["targetType"]["targetValueOne"] == 200
+    assert payload["targetValueOne"] == 200
 
 def test_distance_duration_mapping():
     step = WorkoutStep(type="run", distance_m=800)
@@ -85,8 +85,8 @@ def test_repeat_group_logic():
     repeat_step = steps_payload[1]
     assert repeat_step["type"] == "RepeatStepDTO"
     assert repeat_step["numberOfIterations"] == 10
-    assert len(repeat_step["workoutSteps"]) == 2
-    assert repeat_step["workoutSteps"][0]["endCondition"]["conditionTypeKey"] == "distance"
+    assert len(repeat_step["repeatChildSteps"]) == 2
+    assert repeat_step["repeatChildSteps"][0]["endCondition"]["conditionTypeKey"] == "distance"
 
 def test_legacy_support():
     # Legacy duration field
@@ -97,4 +97,4 @@ def test_legacy_support():
     legacy_target = {"workoutTargetTypeKey": "heart.rate.zone", "targetValueOne": 140}
     step = WorkoutStep(type="run", duration_mins=30, target=legacy_target)
     payload = create_step_with_target(step.model_dump(), 1)
-    assert payload["targetType"]["targetValueOne"] == 140
+    assert payload["targetValueOne"] == 140

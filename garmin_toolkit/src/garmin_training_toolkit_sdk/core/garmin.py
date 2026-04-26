@@ -10,7 +10,9 @@ from ..protocol.activities import Activity
 from ..protocol.telemetry import ActivityTelemetry
 from ..protocol.workouts import WorkoutPlan
 from ..extractors.activities import get_activities as fetch_activities, get_activity_telemetry
-from ..uploaders.workouts import create_workout, schedule_workout
+from ..uploaders.workouts import create_workout
+from ..uploaders.calendar import schedule_workout
+
 from ..utils import find_token_file, get_authenticated_client, REQUEST_DELAY_MIN, REQUEST_DELAY_MAX
 
 log = logging.getLogger(__name__)
