@@ -127,8 +127,43 @@ def load_env_file(env_path: Optional[Path] = None) -> dict:
     return prefs
 
 
+DI_CLIENT_IDS = (
+    "GARMIN_CONNECT_MOBILE_ANDROID_DI_2025Q2",
+    "GARMIN_CONNECT_MOBILE_ANDROID_DI_2024Q4",
+    "GARMIN_CONNECT_MOBILE_ANDROID_DI",
+    "GARMIN_CONNECT_MOBILE_IOS_DI",
+)
+
+
+def _refresh_garmin_session(token_file: Path) -> bool:
+    """Attempt to refresh Garmin session using multiple client IDs."""
+    from garminconnect import Garmin
+    if not token_file.exists():
+        return False
+
+    with open(token_file) as f:
+        tokens = json.load(f)
+
+    for client_id in DI_CLIENT_IDS:
+        log.info(f"Attempting session refresh with client ID: {client_id}")
+        client = Garmin()
+        try:
+            client.client.loads(json.dumps(tokens))
+            client.client.di_client_id = client_id
+            client.client._refresh_di_token()
+
+            new_tokens = json.loads(client.client.dumps())
+            save_tokens(new_tokens)
+            log.info(f"Successfully refreshed Garmin session using {client_id}")
+            return True
+        except Exception as e:
+            log.debug(f"Refresh failed with {client_id}: {e}")
+
+    return False
+
+
 def get_authenticated_client(token_file: Optional[Path] = None):
-    """Get authenticated Garmin client using saved tokens."""
+    """Get authenticated Garmin client using saved tokens with self-healing."""
     from garminconnect import Garmin
     
     if token_file is None:
@@ -137,13 +172,30 @@ def get_authenticated_client(token_file: Optional[Path] = None):
     if not token_file:
         raise Exception("Not authenticated. Run garmin_auth_browser.py first.")
     
-    with open(token_file) as f:
-        tokens = json.load(f)
+    def _create_client():
+        with open(token_file) as f:
+            tokens = json.load(f)
+        client = Garmin()
+        client.client.loads(json.dumps(tokens))
+        return client
+
+    client = _create_client()
     
-    client = Garmin()
-    client.client.loads(json.dumps(tokens))
-    log.info(f"Authenticated using tokens from {token_file}")
-    return client
+    try:
+        # Light test call to verify authentication
+        client.get_userprofile_settings()
+        log.info(f"Authenticated using tokens from {token_file}")
+        return client
+    except Exception as e:
+        error_msg = str(e).lower()
+        if "401" in error_msg or "unauthorized" in error_msg:
+            log.warning("Authentication expired or unauthorized. Attempting self-healing refresh...")
+            if _refresh_garmin_session(token_file):
+                log.info("Self-healing successful! Re-instantiating client.")
+                return _create_client()
+        
+        log.error(f"Authentication failed and self-healing was not possible: {e}")
+        raise e
 
 
 def save_tokens(tokens: dict, locations: Optional[list] = None):
