@@ -60,32 +60,45 @@ def get_body_composition(garmin_client, start_date: str, end_date: str) -> List[
     return composition_records
 
 def get_hrv_data(garmin_client, start_date: str, end_date: str) -> List[HRVData]:
-    """Fetch HRV data for a given date range."""
+    """Fetch HRV data for a given date range by iterating through each day."""
+    from datetime import datetime, timedelta
     hrv_records = []
-    try:
-        raw_hrv = garmin_client.get_hrv_data(end_date)
-        if raw_hrv:
-            if isinstance(raw_hrv, list):
-                for h in raw_hrv:
-                    date = h.get("calendarDate")
-                    if date and start_date <= date <= end_date:
-                        hrv_records.append(HRVData(
-                            date=date,
-                            avg_hrv=h.get("averageHRV"),
-                            min_hrv=h.get("minHRV"),
-                            max_hrv=h.get("maxHRV")
-                        ))
-            elif isinstance(raw_hrv, dict):
-                 date = raw_hrv.get("calendarDate")
-                 if date and start_date <= date <= end_date:
+
+    start = datetime.strptime(start_date, "%Y-%m-%d")
+    end = datetime.strptime(end_date, "%Y-%m-%d")
+    current = start
+
+    while current <= end:
+        curr_str = current.strftime("%Y-%m-%d")
+        try:
+            # Underlying client method only takes a single date string
+            raw = garmin_client.get_hrv_data(curr_str)
+
+            if raw and "hrvSummary" in raw:
+                summary = raw["hrvSummary"]
+                date = summary.get("calendarDate")
+                if date == curr_str:
                     hrv_records.append(HRVData(
                         date=date,
-                        avg_hrv=raw_hrv.get("averageHRV"),
-                        min_hrv=raw_hrv.get("minHRV"),
-                        max_hrv=raw_hrv.get("maxHRV")
+                        avg_hrv=summary.get("lastNightAvg"),
+                        min_hrv=None,
+                        max_hrv=summary.get("lastNight5MinHigh")
                     ))
-    except Exception as e:
-        log.warning(f"HRV data fetch failed: {e}")
+            elif isinstance(raw, list):
+                # Fallback for different API versions or multi-day responses
+                for h in raw:
+                    date = h.get("calendarDate")
+                    if date == curr_str:
+                        hrv_records.append(HRVData(
+                            date=date,
+                            avg_hrv=h.get("averageHRV") or h.get("lastNightAvg"),
+                            min_hrv=h.get("minHRV"),
+                            max_hrv=h.get("maxHRV") or h.get("lastNight5MinHigh")
+                        ))
+        except Exception as e:
+            log.debug(f"HRV data for {curr_str} not available: {e}")
+        current += timedelta(days=1)
+
     return hrv_records
 
 def get_sleep_data(garmin_client, start_date: str, end_date: str) -> List[SleepData]:

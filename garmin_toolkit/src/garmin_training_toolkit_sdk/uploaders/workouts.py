@@ -73,6 +73,8 @@ def create_step(
     step_order: int,
     step_type_key: str,
     duration_value: float,
+    condition_type_key: str = "time",
+    condition_type_id: int = 2,
     target_type_id: int = 1,
     target_type_key: str = "no.target",
     target_value_one: Optional[float] = None,
@@ -100,9 +102,9 @@ def create_step(
         "childStepId": None,
         "description": description,
         "endCondition": {
-            "conditionTypeId": 2,
-            "conditionTypeKey": "time",
-            "displayOrder": 2,
+            "conditionTypeId": condition_type_id,
+            "conditionTypeKey": condition_type_key,
+            "displayOrder": condition_type_id,
             "displayable": True,
         },
         "endConditionValue": duration_value,
@@ -110,19 +112,34 @@ def create_step(
             "workoutTargetTypeId": target_type_id,
             "workoutTargetTypeKey": target_type_key,
             "displayOrder": target_type_id, # Usually matches ID or key order
-            "targetValueOne": target_value_one,
-            "targetValueTwo": target_value_two,
-            "zone": {"low": target_value_one, "high": target_value_two} if target_value_one is not None else None
         },
         "targetValueOne": target_value_one,
         "targetValueTwo": target_value_two,
+        "zone": {"low": target_value_one, "high": target_value_two} if target_value_one is not None else None
     }
     
     return step
 
 
-def create_step_with_target(step_type: str, duration: float, order: int, target: Optional[Any] = None) -> Dict[str, Any]:
+def create_step_with_target(step_data: Dict[str, Any], order: int) -> Dict[str, Any]:
     """Create a step with target values parsed from template."""
+    step_type = step_data["type"]
+    target = step_data.get("target")
+    
+    # Handle Durations (Convert Minutes to Seconds)
+    duration_value = 0.0
+    condition_type_key = "time"
+    condition_type_id = 2
+    
+    if step_data.get("distance_m") is not None:
+        duration_value = float(step_data["distance_m"])
+        condition_type_key = "distance"
+        condition_type_id = 3
+    elif step_data.get("duration_mins") is not None:
+        duration_value = float(step_data["duration_mins"]) * 60
+    elif step_data.get("duration") is not None:
+        duration_value = float(step_data["duration"]) * 60
+
     target_value_one = None
     target_value_two = None
     workout_target_type_id = 1
@@ -153,28 +170,52 @@ def create_step_with_target(step_type: str, duration: float, order: int, target:
                 target_value_one = round(watts * 0.95, 2)
                 target_value_two = round(watts * 1.05, 2)
     elif isinstance(target, dict):
-        # Handle both Garmin-raw keys and our new Semantic keys
         target_type = target.get("target_type") or target.get("workoutTargetTypeKey", "no.target")
         
-        # ID Mapping
-        type_to_id = {
-            "no.target": 1,
-            "power.zone": 2,
-            "heart.rate.zone": 4,
-            "speed.zone": 5,
-            "cadence.zone": 6
-        }
-        
-        workout_target_type_key = target_type
-        workout_target_type_id = target.get("target_type_id") or target.get("workoutTargetTypeId") or type_to_id.get(target_type, 1)
-        
-        target_value_one = target.get("min_target") or target.get("targetValueOne")
-        target_value_two = target.get("max_target") or target.get("targetValueTwo")
+        # New Explicit Models
+        if target_type == "heart.rate":
+            workout_target_type_id = 4
+            workout_target_type_key = "heart.rate.zone"
+            target_value_one = float(target["min_bpm"])
+            target_value_two = float(target["max_bpm"])
+        elif target_type == "pace":
+            workout_target_type_id = 5
+            workout_target_type_key = "speed.zone"
+            # min_pace_seconds is e.g. 240 (4:00/km) which is 1000/240 = 4.16 m/s
+            # Note: Pace in seconds/km. Higher seconds = slower speed.
+            # targetValueOne is MIN speed (slower), targetValueTwo is MAX speed (faster)
+            # So targetValueOne = 1000 / max_pace_seconds
+            # and targetValueTwo = 1000 / min_pace_seconds
+            target_value_one = round(1000.0 / target["max_pace_seconds"], 2)
+            target_value_two = round(1000.0 / target["min_pace_seconds"], 2)
+        elif target_type == "power":
+            workout_target_type_id = 2
+            workout_target_type_key = "power.zone"
+            target_value_one = float(target["min_watts"])
+            target_value_two = float(target["max_watts"])
+        else:
+            # Handle legacy Garmin-raw keys and our old Semantic keys
+            # ID Mapping
+            type_to_id = {
+                "no.target": 1,
+                "power.zone": 2,
+                "heart.rate.zone": 4,
+                "speed.zone": 5,
+                "cadence.zone": 6
+            }
+            
+            workout_target_type_key = target_type
+            workout_target_type_id = target.get("target_type_id") or target.get("workoutTargetTypeId") or type_to_id.get(target_type, 1)
+            
+            target_value_one = target.get("min_target") or target.get("targetValueOne")
+            target_value_two = target.get("max_target") or target.get("targetValueTwo")
     
     return create_step(
         step_order=order,
         step_type_key=step_type,
-        duration_value=duration,
+        duration_value=duration_value,
+        condition_type_key=condition_type_key,
+        condition_type_id=condition_type_id,
         target_type_id=workout_target_type_id,
         target_type_key=workout_target_type_key,
         target_value_one=target_value_one,
@@ -185,24 +226,47 @@ def create_step_with_target(step_type: str, duration: float, order: int, target:
 def create_workout(workout_data: Dict[str, Any]) -> Dict[str, Any]:
     """
     Create a Garmin workout as a raw dictionary instead of an object.
-    This prevents the library from filtering out necessary fields like 'zone'.
+    Supports Repeat Groups (RepeatGroupDTO) and Distance-based steps.
+    FIXED: Uses RepeatGroupDTO and workoutSteps to avoid InvalidTypeIdException.
     """
     steps = []
-    order = 1
+    current_order = 1
     
     for step_data in workout_data["steps"]:
-        step_type = step_data["type"]
-        duration = step_data["duration"]
-        target = step_data.get("target")
+        if step_data.get("type") == "repeat":
+            repeat_steps = []
+            repeat_order = 1
+            for sub_step in step_data["steps"]:
+                repeat_steps.append(create_step_with_target(sub_step, repeat_order))
+                repeat_order += 1
+            
+            steps.append({
+                "type": "RepeatGroupDTO",
+                "stepOrder": current_order,
+                "stepType": {"stepTypeId": 6, "stepTypeKey": "repeat", "displayOrder": 6},
+                "numberOfIterations": step_data["iterations"],
+                "workoutSteps": repeat_steps,
+                "smartRepeat": False,
+                "endCondition": {
+                    "conditionTypeId": 7,
+                    "conditionTypeKey": "iterations",
+                    "displayOrder": 7,
+                    "displayable": True,
+                },
+                "endConditionValue": float(step_data["iterations"]),
+            })
+        else:
+            steps.append(create_step_with_target(step_data, current_order))
         
-        steps.append(create_step_with_target(step_type, float(duration), order, target))
-        order += 1
+        current_order += 1
+    
+    estimated_duration = workout_data.get("duration")
     
     workout = {
         "workoutName": workout_data["name"],
         "description": workout_data.get("description", ""),
         "sportType": {"sportTypeId": 1, "sportTypeKey": "running"},
-        "estimatedDurationInSecs": workout_data.get("duration"),
+        "estimatedDurationInSecs": estimated_duration * 60 if estimated_duration is not None else None,
         "workoutSegments": [
             {
                 "segmentOrder": 1,
@@ -376,6 +440,7 @@ def main():
             
         try:
             workout = create_workout(workout_data)
+            log.debug(f"Uploading workout payload: {json.dumps(workout, indent=2)}")
             
             # Using raw dictionary upload
             result = client.upload_workout(workout)

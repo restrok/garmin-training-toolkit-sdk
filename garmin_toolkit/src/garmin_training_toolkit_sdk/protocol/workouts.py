@@ -1,9 +1,27 @@
-from pydantic import BaseModel, RootModel, field_validator, Field, ConfigDict
-from typing import Optional, Union, Any, Dict, Literal, Sequence
+from pydantic import BaseModel, RootModel, field_validator, model_validator, Field, ConfigDict
+from typing import Optional, Union, Any, Dict, Literal, Sequence, List
+
+class HeartRateTarget(BaseModel):
+    """Target based on heart rate BPM."""
+    target_type: Literal["heart.rate"] = "heart.rate"
+    min_bpm: int
+    max_bpm: int
+
+class PaceTarget(BaseModel):
+    """Target based on pace (seconds per kilometer)."""
+    target_type: Literal["pace"] = "pace"
+    min_pace_seconds: int
+    max_pace_seconds: int
+
+class PowerTarget(BaseModel):
+    """Target based on power (Watts)."""
+    target_type: Literal["power"] = "power"
+    min_watts: int
+    max_watts: int
 
 class WorkoutTarget(BaseModel):
     """
-    Defines the intensity target for a workout step (e.g., a heart rate zone or pace).
+    Legacy defines the intensity target for a workout step (e.g., a heart rate zone or pace).
     """
     model_config = ConfigDict(populate_by_name=True)
 
@@ -38,18 +56,37 @@ class WorkoutTarget(BaseModel):
 
 class WorkoutStep(BaseModel):
     """
-    A single instruction in a workout (e.g., Warmup for 10 minutes).
+    A single instruction in a workout (e.g., Warmup for 10 minutes or 400m).
     """
     type: Literal["warmup", "run", "recovery", "cooldown", "interval"] = Field(
         description="The category of the step. 'run' and 'interval' are typically the main work."
     )
-    duration: float = Field(
+    duration: Optional[float] = Field(
+        default=None,
+        description="Legacy: Duration of the step in minutes. Use duration_mins or distance_m instead."
+    )
+    duration_mins: Optional[float] = Field(
+        default=None,
         description="Duration of the step in minutes. Example: 10.5 for 10 minutes and 30 seconds."
     )
-    target: Optional[Union[WorkoutTarget, str, dict]] = Field(
+    distance_m: Optional[float] = Field(
         default=None,
-        description="Intensity target. Can be a structured WorkoutTarget, or a simple string like '145-155' for HR, '5:00-5:20' for Pace, or '250W' for Power."
+        description="Distance of the step in meters. Example: 400 for 400m."
     )
+    target: Optional[Union[HeartRateTarget, PaceTarget, PowerTarget, WorkoutTarget, str, dict]] = Field(
+        default=None,
+        description="Intensity target. Can be an explicit target (HeartRateTarget, PaceTarget, PowerTarget), a legacy WorkoutTarget, or a simple string."
+    )
+
+    @model_validator(mode="after")
+    def validate_durations(self) -> 'WorkoutStep':
+        durations = [self.duration, self.duration_mins, self.distance_m]
+        provided = [d for d in durations if d is not None]
+        if len(provided) == 0:
+            raise ValueError("Exactly one of 'duration_mins', 'distance_m' (or legacy 'duration') must be provided.")
+        if len(provided) > 1:
+            raise ValueError("Only one of 'duration_mins', 'distance_m' (or legacy 'duration') can be provided.")
+        return self
 
     @classmethod
     def from_list(cls, data: list):
@@ -58,6 +95,14 @@ class WorkoutStep(BaseModel):
         duration = data[1]
         target = data[2] if len(data) > 2 else None
         return cls(type=step_type, duration=duration, target=target)
+
+class RepeatGroup(BaseModel):
+    """
+    A group of steps to be repeated multiple times.
+    """
+    type: Literal["repeat"] = "repeat"
+    iterations: int = Field(gt=0, description="Number of times to repeat the steps.")
+    steps: List[WorkoutStep] = Field(description="The steps to repeat.")
 
 class WorkoutTemplate(BaseModel):
     """
@@ -76,8 +121,8 @@ class WorkoutTemplate(BaseModel):
     date: str = Field(
         description="The scheduled date in YYYY-MM-DD format."
     )
-    steps: Sequence[Union[WorkoutStep, list]] = Field(
-        description="List of workout steps to perform in sequence."
+    steps: Sequence[Union[WorkoutStep, RepeatGroup, list]] = Field(
+        description="List of workout steps or repeat groups to perform in sequence."
     )
 
     @field_validator("steps")
@@ -87,6 +132,8 @@ class WorkoutTemplate(BaseModel):
         for step in v:
             if isinstance(step, list):
                 processed_steps.append(WorkoutStep.from_list(step))
+            elif isinstance(step, dict) and step.get("type") == "repeat":
+                processed_steps.append(RepeatGroup(**step))
             else:
                 processed_steps.append(step)
         return processed_steps
@@ -102,25 +149,24 @@ def create_simple_hr_workout(name: str, date: str, bpm_min: int, bpm_max: int, d
     """
     steps = []
     if warmup_mins > 0:
-        steps.append(WorkoutStep(type="warmup", duration=warmup_mins))
+        steps.append(WorkoutStep(type="warmup", duration_mins=float(warmup_mins)))
     
     steps.append(WorkoutStep(
         type="run", 
-        duration=duration_mins,
-        target=WorkoutTarget(
-            workoutTargetTypeKey="heart.rate.zone",
-            targetValueOne=float(bpm_min),
-            targetValueTwo=float(bpm_max)
+        duration_mins=float(duration_mins),
+        target=HeartRateTarget(
+            min_bpm=bpm_min,
+            max_bpm=bpm_max
         )
     ))
 
     if cooldown_mins > 0:
-        steps.append(WorkoutStep(type="cooldown", duration=cooldown_mins))
+        steps.append(WorkoutStep(type="cooldown", duration_mins=float(cooldown_mins)))
 
     return WorkoutTemplate(
         name=name,
         date=date,
-        duration=warmup_mins + duration_mins + cooldown_mins,
+        duration=float(warmup_mins + duration_mins + cooldown_mins),
         steps=steps
     )
 
@@ -131,20 +177,20 @@ def create_simple_pace_workout(name: str, date: str, pace: str, duration_mins: i
     """
     steps = []
     if warmup_mins > 0:
-        steps.append(WorkoutStep(type="warmup", duration=warmup_mins))
+        steps.append(WorkoutStep(type="warmup", duration_mins=float(warmup_mins)))
     
     steps.append(WorkoutStep(
         type="run", 
-        duration=duration_mins,
+        duration_mins=float(duration_mins),
         target=pace
     ))
 
     if cooldown_mins > 0:
-        steps.append(WorkoutStep(type="cooldown", duration=cooldown_mins))
+        steps.append(WorkoutStep(type="cooldown", duration_mins=float(cooldown_mins)))
 
     return WorkoutTemplate(
         name=name,
         date=date,
-        duration=warmup_mins + duration_mins + cooldown_mins,
+        duration=float(warmup_mins + duration_mins + cooldown_mins),
         steps=steps
     )
