@@ -240,27 +240,19 @@ def create_workout(workout_data: Dict[str, Any]) -> Dict[str, Any]:
                 repeat_order += 1
             
             steps.append({
-                "type": "RepeatStepDTO",
+                "type": "RepeatGroupDTO",
                 "stepOrder": current_order,
                 "stepType": {"stepTypeId": 6, "stepTypeKey": "repeat", "displayOrder": 6},
-                "childStepId": None,
                 "numberOfIterations": step_data["iterations"],
                 "workoutSteps": repeat_steps,
                 "smartRepeat": False,
                 "endCondition": {
-                    "conditionTypeId": 1,
+                    "conditionTypeId": 7,
                     "conditionTypeKey": "iterations",
-                    "displayOrder": 1,
+                    "displayOrder": 7,
                     "displayable": True,
                 },
-                "endConditionValue": step_data["iterations"],
-                "targetType": {
-                    "workoutTargetTypeId": 1,
-                    "workoutTargetTypeKey": "no.target",
-                    "displayOrder": 1,
-                },
-                "targetValueOne": None,
-                "targetValueTwo": None,
+                "endConditionValue": float(step_data["iterations"]),
             })
         else:
             steps.append(create_step_with_target(step_data, current_order))

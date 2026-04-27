@@ -83,10 +83,11 @@ def test_repeat_group_logic():
     assert steps_payload[0]["stepType"]["stepTypeKey"] == "warmup"
     
     repeat_step = steps_payload[1]
-    assert repeat_step["type"] == "RepeatStepDTO"
+    assert repeat_step["type"] == "RepeatGroupDTO"
     assert repeat_step["numberOfIterations"] == 10
-    assert len(repeat_step["repeatChildSteps"]) == 2
-    assert repeat_step["repeatChildSteps"][0]["endCondition"]["conditionTypeKey"] == "distance"
+    assert len(repeat_step["workoutSteps"]) == 2
+    assert repeat_step["workoutSteps"][0]["endCondition"]["conditionTypeKey"] == "distance"
+    assert repeat_step["endCondition"]["conditionTypeId"] == 7
 
 def test_legacy_support():
     # Legacy duration field
