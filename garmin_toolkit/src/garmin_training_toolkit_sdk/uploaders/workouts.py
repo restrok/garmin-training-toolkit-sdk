@@ -226,7 +226,8 @@ def create_step_with_target(step_data: Dict[str, Any], order: int) -> Dict[str, 
 def create_workout(workout_data: Dict[str, Any]) -> Dict[str, Any]:
     """
     Create a Garmin workout as a raw dictionary instead of an object.
-    Supports Repeat Groups and Distance-based steps.
+    Supports Repeat Groups (RepeatGroupDTO) and Distance-based steps.
+    FIXED: Uses RepeatGroupDTO and workoutSteps to avoid InvalidTypeIdException.
     """
     steps = []
     current_order = 1
@@ -439,6 +440,7 @@ def main():
             
         try:
             workout = create_workout(workout_data)
+            log.debug(f"Uploading workout payload: {json.dumps(workout, indent=2)}")
             
             # Using raw dictionary upload
             result = client.upload_workout(workout)
