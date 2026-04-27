@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 - **Workout Repeats**: Resolved `InvalidTypeIdException` (HTTP 500) during workout uploads by using `RepeatGroupDTO` and `workoutSteps` instead of `RepeatStepDTO` and `repeatChildSteps`. Corrected the iteration condition ID to `7`.
+- **HRV Extraction**: Fixed `get_hrv_data` to correctly iterate through date ranges and parse the `hrvSummary` schema, ensuring historical recovery trends are captured.
 
 ### Added
 - **API Documentation**: Added `GARMIN_API_QUIRKS.md` to document the internal Garmin API quirks and "ground truth" implementation requirements discovered during reverse-engineering.
