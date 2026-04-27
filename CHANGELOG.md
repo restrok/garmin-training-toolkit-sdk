@@ -4,7 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- **Workout Repeats**: Resolved `InvalidTypeIdException` (HTTP 500) during workout uploads by using `RepeatGroupDTO` and `workoutSteps` instead of `RepeatStepDTO` and `repeatChildSteps`. Corrected the iteration condition ID to `7`.
+
 ### Added
+- **API Documentation**: Added `GARMIN_API_QUIRKS.md` to document the internal Garmin API quirks and "ground truth" implementation requirements discovered during reverse-engineering.
 - **Self-Healing Authentication**: Implemented a robust mechanism to handle `401 Unauthorized` errors.
   - Added `_refresh_garmin_session` utility to rotate through multiple Android/iOS Client IDs (`DI_CLIENT_IDS`) during token refresh.
   - Updated `get_authenticated_client` to automatically attempt a session refresh if the initial authentication fails.
