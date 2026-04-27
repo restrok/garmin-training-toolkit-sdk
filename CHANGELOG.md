@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-04-26
+
 ### Fixed
 - **Workout Repeats**: Resolved `InvalidTypeIdException` (HTTP 500) during workout uploads by using `RepeatGroupDTO` and `workoutSteps` instead of `RepeatStepDTO` and `repeatChildSteps`. Corrected the iteration condition ID to `7`.
 - **HRV Extraction**: Fixed `get_hrv_data` to correctly iterate through date ranges and parse the `hrvSummary` schema, ensuring historical recovery trends are captured.
