@@ -245,7 +245,7 @@ def create_workout(workout_data: Dict[str, Any]) -> Dict[str, Any]:
                 "stepType": {"stepTypeId": 6, "stepTypeKey": "repeat", "displayOrder": 6},
                 "childStepId": None,
                 "numberOfIterations": step_data["iterations"],
-                "repeatChildSteps": repeat_steps,  # Must be repeatChildSteps
+                "workoutSteps": repeat_steps,
                 "smartRepeat": False,
                 "endCondition": {
                     "conditionTypeId": 1,
