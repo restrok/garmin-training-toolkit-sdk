@@ -21,7 +21,7 @@ from ..utils import (
     validate_workouts_file,
 )
 from ..protocol.workouts import WorkoutPlan
-from .calendar import clear_calendar_range, schedule_workout
+from .calendar import clear_calendar_range, schedule_workout, get_calendar_range
 
 logging.basicConfig(
     level=logging.INFO,

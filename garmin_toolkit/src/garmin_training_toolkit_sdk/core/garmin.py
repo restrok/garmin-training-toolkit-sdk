@@ -86,15 +86,18 @@ class GarminProvider(BaseBiometricProvider):
         Accepts YYYY-MM-DD string or date object.
         Standardizes positional (year, month) to a single date-based query.
         """
+        dt: date
         if isinstance(workout_date, str):
             try:
-                workout_date = date.fromisoformat(workout_date)
+                dt = date.fromisoformat(workout_date)
             except ValueError:
                 # Handle YYYY-MM-DD HH:MM:SS or similar
-                workout_date = date.fromisoformat(workout_date.split()[0])
+                dt = date.fromisoformat(workout_date.split()[0])
+        else:
+            dt = workout_date
         
-        log.debug(f"Fetching scheduled workouts for {workout_date.year}-{workout_date.month}")
-        return self.client.get_scheduled_workouts(workout_date.year, workout_date.month)
+        log.debug(f"Fetching scheduled workouts for {dt.year}-{dt.month}")
+        return self.client.get_scheduled_workouts(dt.year, dt.month)
 
     @refresh_if_unauthorized
     def get_calendar_range(self, start_date: date, end_date: date) -> List[dict]:
