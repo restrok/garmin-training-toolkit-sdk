@@ -9,8 +9,15 @@ from .base import BaseBiometricProvider, SuccessReport
 from ..protocol.activities import Activity
 from ..protocol.telemetry import ActivityTelemetry
 from ..protocol.workouts import WorkoutPlan
+from ..protocol.biometrics import HRVData, SleepData
+from ..protocol.user import UserProfile
 from ..extractors.activities import get_activities as fetch_activities, get_activity_telemetry
-from ..uploaders.workouts import create_workout
+from ..extractors.biometrics import (
+    get_sleep_data as fetch_sleep,
+    get_hrv_data as fetch_hrv,
+    get_user_profile as fetch_user_profile
+)
+from ..uploaders.workouts import create_workout, delete_workout as perform_delete
 from ..uploaders.calendar import schedule_workout
 
 from ..utils import (
@@ -150,3 +157,33 @@ class GarminProvider(BaseBiometricProvider):
                 continue
                 
         return filtered_items
+
+    @refresh_if_unauthorized
+    def unschedule_workout(self, calendar_item_id: str) -> bool:
+        """Remove a workout from the calendar."""
+        try:
+            self.client.unschedule_workout(calendar_item_id)
+            return True
+        except Exception as e:
+            log.error(f"Failed to unschedule workout {calendar_item_id}: {e}")
+            return False
+
+    @refresh_if_unauthorized
+    def delete_workout_template(self, workout_id: str) -> bool:
+        """Permanently delete a workout definition."""
+        return perform_delete(self.client, workout_id)
+
+    @refresh_if_unauthorized
+    def get_sleep_history(self, start_date: date, end_date: date) -> List[SleepData]:
+        """Fetch sleep data for a date range."""
+        return fetch_sleep(self.client, start_date.isoformat(), end_date.isoformat())
+
+    @refresh_if_unauthorized
+    def get_hrv_history(self, start_date: date, end_date: date) -> List[HRVData]:
+        """Fetch HRV data for a date range."""
+        return fetch_hrv(self.client, start_date.isoformat(), end_date.isoformat())
+
+    @refresh_if_unauthorized
+    def get_user_profile(self) -> Optional[UserProfile]:
+        """Fetch the user's biometric profile."""
+        return fetch_user_profile(self.client)

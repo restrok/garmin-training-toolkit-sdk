@@ -78,3 +78,9 @@ class MockGarminClient:
             if w_dt.year == year and w_dt.month == month:
                 items.append(w)
         return {"calendarItems": items}
+
+    def get_user_profile(self) -> dict:
+        return {"userData": {"displayName": "Mock User"}}
+
+    def get_userprofile_settings(self) -> dict:
+        return {"displayName": "Mock User"}
