@@ -80,6 +80,39 @@ def retry_with_backoff(max_retries: int = MAX_RETRIES, initial_delay: float = 1.
     return decorator
 
 
+def refresh_if_unauthorized(func):
+    """
+    Decorator to automatically attempt a token refresh when a 401 is encountered
+    on non-critical endpoints.
+    """
+    @wraps(func)
+    def wrapper(self, *args, **kwargs):
+        try:
+            return func(self, *args, **kwargs)
+        except Exception as e:
+            error_msg = str(e).lower()
+            if "401" in error_msg or "unauthorized" in error_msg:
+                log.warning(f"401 Unauthorized in {func.__name__}. Attempting token refresh...")
+                
+                token_path = getattr(self, "token_path", None) or find_token_file()
+                if token_path and _refresh_garmin_session(token_path):
+                    log.info("Refresh successful. Re-initializing client and retrying...")
+                    
+                    # If the object has a client attribute, we should re-initialize it
+                    if hasattr(self, "client"):
+                        from garminconnect import Garmin
+                        import json
+                        with open(token_path) as f:
+                            tokens = json.load(f)
+                        new_client = Garmin()
+                        new_client.client.loads(json.dumps(tokens))
+                        self.client = new_client
+                    
+                    return func(self, *args, **kwargs)
+            raise e
+    return wrapper
+
+
 def safe_api_call(func, *args, **kwargs):
     """Make an API call with retry and error handling."""
     @retry_with_backoff()

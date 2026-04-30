@@ -414,21 +414,20 @@ def main():
     log.info("Uploading and scheduling workouts...")
     
     # 1. Fetch current calendar to avoid duplicates
-    months_to_fetch = set()
-    for w in WORKOUTS:
-        date_parts = w["date"].split("-")
-        months_to_fetch.add((int(date_parts[0]), int(date_parts[1])))
-    
     scheduled_dates = set()
-    for year, month in months_to_fetch:
+    if WORKOUTS:
         try:
-            cal = client.get_scheduled_workouts(year, month)
-            if cal and "calendarItems" in cal:
-                for item in cal["calendarItems"]:
-                    if item.get("itemType") == "workout":
-                        scheduled_dates.add(item.get("date"))
+            dates = [w["date"] for w in WORKOUTS]
+            start_date = min(dates)
+            end_date = max(dates)
+            
+            log.info(f"Checking calendar for duplicates between {start_date} and {end_date}...")
+            items = get_calendar_range(client, start_date, end_date)
+            for item in items:
+                if item.get("itemType") == "workout":
+                    scheduled_dates.add(item.get("date"))
         except Exception as e:
-            log.warning(f"Could not fetch calendar for {year}-{month}: {e}")
+            log.warning(f"Could not fetch calendar to check for duplicates: {e}")
 
     # 2. Upload and Schedule
     for i, workout_data in enumerate(WORKOUTS, 1):
@@ -459,6 +458,10 @@ def main():
             continue
     
     log.info("Done!")
+
+
+if __name__ == "__main__":
+    main()
 
 
 if __name__ == "__main__":

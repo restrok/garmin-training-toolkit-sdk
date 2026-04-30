@@ -30,3 +30,8 @@ class BaseBiometricProvider(ABC):
     def upload_training_plan(self, plan: WorkoutPlan) -> SuccessReport:
         """Upload a full training plan (multiple workouts) to the provider."""
         pass
+
+    @abstractmethod
+    def get_calendar_range(self, start_date: date, end_date: date) -> List[dict]:
+        """Fetch all scheduled items within a date range."""
+        pass

@@ -12,6 +12,11 @@ class ProviderTool:
         self.func = func
 
     def __call__(self, *args, **kwargs):
+        """Allow direct execution of the tool."""
+        return self.func(*args, **kwargs)
+
+    def run(self, *args, **kwargs):
+        """Safety alias for execution, compatible with LangChain expectations."""
         return self.func(*args, **kwargs)
 
 class ToolFactory:

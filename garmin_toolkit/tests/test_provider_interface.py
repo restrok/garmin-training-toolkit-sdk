@@ -17,13 +17,19 @@ def test_tool_factory():
         def get_activities(self, start_date, end_date): return []
         def get_telemetry(self, activity_id): return None
         def upload_training_plan(self, plan): return SuccessReport(success=True, message="Done")
+        def get_calendar_range(self, start_date, end_date): return []
 
     provider = MockProvider()
     tools = ToolFactory.create_tools(provider)
-    
+
     assert len(tools) == 3
     assert tools[0].name == "get_activities"
-    assert tools[1].name == "get_telemetry"
+    assert tools[2].name == "upload_training_plan"
+
+    # Verify .run() attribute exists and is callable (for LangChain compatibility)
+    assert hasattr(tools[0], "run")
+    assert callable(tools[0].run)
+    assert tools[0].run(date.today(), date.today()) == []
     assert tools[2].name == "upload_training_plan"
 
 def test_protocol_import_path():
