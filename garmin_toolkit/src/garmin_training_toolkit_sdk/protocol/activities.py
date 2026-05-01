@@ -13,6 +13,9 @@ class ActivitySplit(BaseModel):
     avg_pace_mps: Optional[float] = None
     avg_cadence: Optional[float] = None
     calories: Optional[float] = None
+    # Swimming Specific
+    strokes: Optional[float] = None
+    avg_swolf: Optional[float] = None
 
 class Activity(BaseModel):
     id: int
@@ -27,4 +30,8 @@ class Activity(BaseModel):
     calories: Optional[float] = None
     elevation_gain: Optional[float] = None
     vo2max: Optional[float] = None
+    # Swimming Specific
+    pool_length_m: Optional[float] = None
+    total_strokes: Optional[float] = None
+    avg_swolf: Optional[float] = None
     splits: Optional[List[ActivitySplit]] = Field(default_factory=list)

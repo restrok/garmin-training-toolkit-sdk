@@ -81,7 +81,9 @@ def get_activity_splits(client, activity_id: int) -> List[ActivitySplit]:
                     max_hr=lap.get("maxHR"),
                     avg_pace_mps=lap.get("averageMovingSpeed"),
                     avg_cadence=lap.get("averageRunCadence"),
-                    calories=lap.get("calories")
+                    calories=lap.get("calories"),
+                    strokes=lap.get("strokes"),
+                    avg_swolf=lap.get("averageSWOLF")
                 ))
             return laps
     except Exception as e:
@@ -111,7 +113,10 @@ def get_activities(client, start_date: str, end_date: str, limit: int = 20) -> L
                 avg_pace=a.get("averageSpeed"),
                 calories=a.get("calories"),
                 elevation_gain=a.get("elevationGain"),
-                vo2max=a.get("vO2MaxValue")
+                vo2max=a.get("vO2MaxValue"),
+                pool_length_m=a.get("poolLength"),
+                total_strokes=a.get("strokes"),
+                avg_swolf=a.get("averageSWOLF")
             )
             # You might want to fetch splits lazily or keep this separate to avoid rate limits
             activities.append(activity)

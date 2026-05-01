@@ -261,20 +261,35 @@ def create_workout(workout_data: Dict[str, Any]) -> Dict[str, Any]:
         current_order += 1
     
     estimated_duration = workout_data.get("duration")
+    sport_type_key = workout_data.get("sport", "running").lower()
+    
+    # Garmin Sport Type Mapping
+    sport_types = {
+        "running": {"sportTypeId": 1, "sportTypeKey": "running"},
+        "cycling": {"sportTypeId": 2, "sportTypeKey": "cycling"},
+        "swimming": {"sportTypeId": 4, "sportTypeKey": "lap_swimming"},
+        "lap_swimming": {"sportTypeId": 4, "sportTypeKey": "lap_swimming"},
+    }
+    sport_type = sport_types.get(sport_type_key, sport_types["running"])
     
     workout = {
         "workoutName": workout_data["name"],
         "description": workout_data.get("description", ""),
-        "sportType": {"sportTypeId": 1, "sportTypeKey": "running"},
+        "sportType": sport_type,
         "estimatedDurationInSecs": estimated_duration * 60 if estimated_duration is not None else None,
         "workoutSegments": [
             {
                 "segmentOrder": 1,
-                "sportType": {"sportTypeId": 1, "sportTypeKey": "running"},
+                "sportType": sport_type,
                 "workoutSteps": steps
             }
         ]
     }
+    
+    # Pool Length for swimming
+    if sport_type_key in ("swimming", "lap_swimming"):
+        workout["poolLength"] = workout_data.get("pool_length", 25.0)
+        workout["poolLengthUnit"] = {"unitId": 1, "unitKey": "meter"}
     
     return workout
 
