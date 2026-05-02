@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-05-02
+
+### Added
+- **Swim Activity Debugging**: Added `garmin_toolkit/debug_swim.py` for deep inspection of swimming activities, including strokes, lengths, and intervals.
+- **Session Recovery Decorator**: Introduced `@refresh_if_unauthorized` in `utils.py` to automatically handle session expiration across all provider methods.
+
+### Changed
+- **Unified Provider Interface**: Refactored `GarminProvider` to use the new session recovery decorator and standardized method signatures.
+- **Calendar Management**: Enhanced `get_calendar_range` to handle multi-month pagination and improved client method discovery.
+- **Calendar Safeguards**: Added logic to `clear_calendar_range` to skip Auto Training Plan (ATP) items, preventing 403/404 errors during bulk cleanup.
+
+### Fixed
+- **Workout Upload Reliability**: Improved error handling and delay logic during bulk workout uploads and scheduling.
+
 ## [0.5.0] - 2026-04-26
 
 ### Fixed
