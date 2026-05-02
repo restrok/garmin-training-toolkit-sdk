@@ -54,10 +54,33 @@ class MockGarminClient:
         self.scheduled_workouts = [w for w in self.scheduled_workouts if str(w.get("calendarItemId")) != str(calendar_item_id)]
         return True
 
-    def get_scheduled_workouts(self, year: int, month: int) -> dict:
+    def get_scheduled_workouts(self, workout_date: Any) -> dict:
+        if isinstance(workout_date, (int, float)):
+             # Fallback for old positional year if called as (year, month)
+             # but we want to encourage the new signature
+             pass
+
+        if isinstance(workout_date, str):
+            dt = datetime.strptime(workout_date.split()[0], "%Y-%m-%d")
+        elif hasattr(workout_date, "year") and hasattr(workout_date, "month"):
+            dt = workout_date
+        else:
+            # Fallback for positional year/month if still used
+            # This is a bit hacky but helps with transition
+            return {"calendarItems": []}
+
+        year = dt.year
+        month = dt.month
+        
         items = []
         for w in self.scheduled_workouts:
-            dt = datetime.strptime(w["date"], "%Y-%m-%d")
-            if dt.year == year and dt.month == month:
+            w_dt = datetime.strptime(w["date"], "%Y-%m-%d")
+            if w_dt.year == year and w_dt.month == month:
                 items.append(w)
         return {"calendarItems": items}
+
+    def get_user_profile(self) -> dict:
+        return {"userData": {"displayName": "Mock User"}}
+
+    def get_userprofile_settings(self) -> dict:
+        return {"displayName": "Mock User"}

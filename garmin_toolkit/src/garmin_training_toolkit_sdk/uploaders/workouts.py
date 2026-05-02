@@ -21,7 +21,7 @@ from ..utils import (
     validate_workouts_file,
 )
 from ..protocol.workouts import WorkoutPlan
-from .calendar import clear_calendar_range, schedule_workout
+from .calendar import clear_calendar_range, schedule_workout, get_calendar_range
 
 logging.basicConfig(
     level=logging.INFO,
@@ -261,20 +261,35 @@ def create_workout(workout_data: Dict[str, Any]) -> Dict[str, Any]:
         current_order += 1
     
     estimated_duration = workout_data.get("duration")
+    sport_type_key = workout_data.get("sport", "running").lower()
+    
+    # Garmin Sport Type Mapping
+    sport_types = {
+        "running": {"sportTypeId": 1, "sportTypeKey": "running"},
+        "cycling": {"sportTypeId": 2, "sportTypeKey": "cycling"},
+        "swimming": {"sportTypeId": 4, "sportTypeKey": "lap_swimming"},
+        "lap_swimming": {"sportTypeId": 4, "sportTypeKey": "lap_swimming"},
+    }
+    sport_type = sport_types.get(sport_type_key, sport_types["running"])
     
     workout = {
         "workoutName": workout_data["name"],
         "description": workout_data.get("description", ""),
-        "sportType": {"sportTypeId": 1, "sportTypeKey": "running"},
+        "sportType": sport_type,
         "estimatedDurationInSecs": estimated_duration * 60 if estimated_duration is not None else None,
         "workoutSegments": [
             {
                 "segmentOrder": 1,
-                "sportType": {"sportTypeId": 1, "sportTypeKey": "running"},
+                "sportType": sport_type,
                 "workoutSteps": steps
             }
         ]
     }
+    
+    # Pool Length for swimming
+    if sport_type_key in ("swimming", "lap_swimming"):
+        workout["poolLength"] = workout_data.get("pool_length", 25.0)
+        workout["poolLengthUnit"] = {"unitId": 1, "unitKey": "meter"}
     
     return workout
 
@@ -414,21 +429,20 @@ def main():
     log.info("Uploading and scheduling workouts...")
     
     # 1. Fetch current calendar to avoid duplicates
-    months_to_fetch = set()
-    for w in WORKOUTS:
-        date_parts = w["date"].split("-")
-        months_to_fetch.add((int(date_parts[0]), int(date_parts[1])))
-    
     scheduled_dates = set()
-    for year, month in months_to_fetch:
+    if WORKOUTS:
         try:
-            cal = client.get_scheduled_workouts(year, month)
-            if cal and "calendarItems" in cal:
-                for item in cal["calendarItems"]:
-                    if item.get("itemType") == "workout":
-                        scheduled_dates.add(item.get("date"))
+            dates = [w["date"] for w in WORKOUTS]
+            start_date = min(dates)
+            end_date = max(dates)
+            
+            log.info(f"Checking calendar for duplicates between {start_date} and {end_date}...")
+            items = get_calendar_range(client, start_date, end_date)
+            for item in items:
+                if item.get("itemType") == "workout":
+                    scheduled_dates.add(item.get("date"))
         except Exception as e:
-            log.warning(f"Could not fetch calendar for {year}-{month}: {e}")
+            log.warning(f"Could not fetch calendar to check for duplicates: {e}")
 
     # 2. Upload and Schedule
     for i, workout_data in enumerate(WORKOUTS, 1):
@@ -459,6 +473,10 @@ def main():
             continue
     
     log.info("Done!")
+
+
+if __name__ == "__main__":
+    main()
 
 
 if __name__ == "__main__":

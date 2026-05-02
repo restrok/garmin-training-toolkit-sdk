@@ -65,7 +65,8 @@ def exchange_oauth2(oauth1: dict, consumer: dict) -> dict:
         resource_owner_secret=oauth1["oauth_token_secret"],
     )
     url = "https://connectapi.garmin.com/oauth-service/oauth/exchange/user/2.0"
-    data: dict[str, Any] = {}
+    # Specifically request 'all' scope which includes USER_PROFILE and activity scopes
+    data: dict[str, Any] = {"scope": "all"}
     resp = sess.post(
         url,
         headers={
@@ -77,6 +78,10 @@ def exchange_oauth2(oauth1: dict, consumer: dict) -> dict:
     )
     resp.raise_for_status()
     token = resp.json()
+    
+    if "scope" in token:
+        log.info(f"Granted scopes: {token['scope']}")
+        
     token["expires_at"] = int(time.time() + token["expires_in"])
     token["refresh_token_expires_at"] = int(
         time.time() + token["refresh_token_expires_in"]

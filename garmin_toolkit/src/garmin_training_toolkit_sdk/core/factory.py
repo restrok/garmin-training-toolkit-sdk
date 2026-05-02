@@ -12,6 +12,11 @@ class ProviderTool:
         self.func = func
 
     def __call__(self, *args, **kwargs):
+        """Allow direct execution of the tool."""
+        return self.func(*args, **kwargs)
+
+    def run(self, *args, **kwargs):
+        """Safety alias for execution, compatible with LangChain expectations."""
         return self.func(*args, **kwargs)
 
 class ToolFactory:
@@ -35,5 +40,35 @@ class ToolFactory:
                 name="upload_training_plan",
                 description="Upload and schedule a structured training plan (workouts) to the provider device/account.",
                 func=provider.upload_training_plan
+            ),
+            ProviderTool(
+                name="get_calendar_range",
+                description="Fetch all scheduled items within a date range (YYYY-MM-DD).",
+                func=provider.get_calendar_range
+            ),
+            ProviderTool(
+                name="unschedule_workout",
+                description="Remove a specific workout from the calendar using its calendar_item_id.",
+                func=provider.unschedule_workout
+            ),
+            ProviderTool(
+                name="delete_workout_template",
+                description="Permanently delete a workout definition from the provider library by its workout_id.",
+                func=provider.delete_workout_template
+            ),
+            ProviderTool(
+                name="get_sleep_history",
+                description="Fetch sleep records (durations, scores, stages) for a date range (YYYY-MM-DD).",
+                func=provider.get_sleep_history
+            ),
+            ProviderTool(
+                name="get_hrv_history",
+                description="Fetch Heart Rate Variability (HRV) data for a date range (YYYY-MM-DD).",
+                func=provider.get_hrv_history
+            ),
+            ProviderTool(
+                name="get_user_profile",
+                description="Fetch the user's biometric profile (age, weight, max HR, etc.).",
+                func=provider.get_user_profile
             )
         ]
