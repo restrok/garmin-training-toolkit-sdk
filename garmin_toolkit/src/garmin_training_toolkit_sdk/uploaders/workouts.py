@@ -181,11 +181,7 @@ def create_step_with_target(step_data: Dict[str, Any], order: int) -> Dict[str, 
         elif target_type == "pace":
             workout_target_type_id = 5
             workout_target_type_key = "speed.zone"
-            # min_pace_seconds is e.g. 240 (4:00/km) which is 1000/240 = 4.16 m/s
-            # Note: Pace in seconds/km. Higher seconds = slower speed.
             # targetValueOne is MIN speed (slower), targetValueTwo is MAX speed (faster)
-            # So targetValueOne = 1000 / max_pace_seconds
-            # and targetValueTwo = 1000 / min_pace_seconds
             target_value_one = round(1000.0 / target["max_pace_seconds"], 2)
             target_value_two = round(1000.0 / target["min_pace_seconds"], 2)
         elif target_type == "power":
