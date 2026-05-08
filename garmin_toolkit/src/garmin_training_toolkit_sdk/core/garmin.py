@@ -8,7 +8,7 @@ from pathlib import Path
 from .base import BaseBiometricProvider, SuccessReport
 from ..protocol.activities import Activity
 from ..protocol.telemetry import ActivityTelemetry
-from ..protocol.workouts import WorkoutPlan
+from ..protocol.workouts import WorkoutPlan, WorkoutTemplateSummary
 from ..protocol.biometrics import HRVData, SleepData
 from ..protocol.user import UserProfile
 from ..extractors.activities import get_activities as fetch_activities, get_activity_telemetry
@@ -105,6 +105,17 @@ class GarminProvider(BaseBiometricProvider):
         
         log.debug(f"Fetching scheduled workouts for {dt.year}-{dt.month}")
         return self.client.get_scheduled_workouts(dt.year, dt.month)
+
+    @refresh_if_unauthorized
+    def get_workout_templates(self) -> List[WorkoutTemplateSummary]:
+        """Fetch all workout templates from the library."""
+        log.info("Fetching workout templates from Garmin library...")
+        try:
+            raw_workouts = self.client.get_workouts()
+            return [WorkoutTemplateSummary(**w) for w in raw_workouts]
+        except Exception as e:
+            log.error(f"Failed to fetch workout templates: {e}")
+            raise
 
     @refresh_if_unauthorized
     def get_calendar_range(self, start_date: date, end_date: date) -> List[dict]:
