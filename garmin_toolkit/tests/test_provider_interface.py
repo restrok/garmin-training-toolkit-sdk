@@ -8,6 +8,7 @@ def test_tool_factory():
         def get_activities(self, start_date, end_date): return []
         def get_telemetry(self, activity_id): return None
         def upload_training_plan(self, plan): return SuccessReport(success=True, message="Done")
+        def get_workout_templates(self): return []
         def get_calendar_range(self, start_date, end_date): return []
         def unschedule_workout(self, calendar_item_id): return True
         def delete_workout_template(self, workout_id): return True
@@ -18,16 +19,17 @@ def test_tool_factory():
     provider = MockProvider()
     tools = ToolFactory.create_tools(provider)
     
-    # We now have 9 tools (3 original + 1 calendar range + 2 deletion + 3 wellness)
-    assert len(tools) == 9
+    # We now have 10 tools
+    assert len(tools) == 10
     assert tools[0].name == "get_activities"
     assert tools[2].name == "upload_training_plan"
-    assert tools[3].name == "get_calendar_range"
-    assert tools[4].name == "unschedule_workout"
-    assert tools[5].name == "delete_workout_template"
-    assert tools[6].name == "get_sleep_history"
-    assert tools[7].name == "get_hrv_history"
-    assert tools[8].name == "get_user_profile"
+    assert tools[3].name == "get_workout_templates"
+    assert tools[4].name == "get_calendar_range"
+    assert tools[5].name == "unschedule_workout"
+    assert tools[6].name == "delete_workout_template"
+    assert tools[7].name == "get_sleep_history"
+    assert tools[8].name == "get_hrv_history"
+    assert tools[9].name == "get_user_profile"
     
     # Verify .run() attribute exists and is callable (for LangChain compatibility)
     assert hasattr(tools[0], "run")

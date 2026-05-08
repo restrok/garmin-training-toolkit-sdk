@@ -42,6 +42,11 @@ class ToolFactory:
                 func=provider.upload_training_plan
             ),
             ProviderTool(
+                name="get_workout_templates",
+                description="Fetch all existing workout templates from the provider library.",
+                func=provider.get_workout_templates
+            ),
+            ProviderTool(
                 name="get_calendar_range",
                 description="Fetch all scheduled items within a date range (YYYY-MM-DD).",
                 func=provider.get_calendar_range

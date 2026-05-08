@@ -4,7 +4,7 @@ from datetime import date
 from pydantic import BaseModel
 from ..protocol.activities import Activity
 from ..protocol.telemetry import ActivityTelemetry
-from ..protocol.workouts import WorkoutPlan
+from ..protocol.workouts import WorkoutPlan, WorkoutTemplateSummary
 from ..protocol.biometrics import HRVData, SleepData
 from ..protocol.user import UserProfile
 
@@ -31,6 +31,11 @@ class BaseBiometricProvider(ABC):
     @abstractmethod
     def upload_training_plan(self, plan: WorkoutPlan) -> SuccessReport:
         """Upload a full training plan (multiple workouts) to the provider."""
+        pass
+
+    @abstractmethod
+    def get_workout_templates(self) -> List[WorkoutTemplateSummary]:
+        """Fetch all workout templates from the provider's library."""
         pass
 
     @abstractmethod

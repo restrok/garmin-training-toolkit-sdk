@@ -1,5 +1,34 @@
+from datetime import datetime
 from pydantic import BaseModel, RootModel, field_validator, model_validator, Field, ConfigDict
 from typing import Optional, Union, Any, Dict, Literal, Sequence, List
+
+class WorkoutTemplateSummary(BaseModel):
+    """Summary of a workout template in the library."""
+    model_config = ConfigDict(populate_by_name=True)
+
+    workout_id: str = Field(alias="workoutId")
+    workout_name: str = Field(alias="workoutName")
+    sport_type: Optional[str] = Field(alias="sportTypeKey", default=None)
+    created_date: Optional[datetime] = Field(alias="createdDate", default=None)
+    updated_date: Optional[datetime] = Field(alias="updatedDate", default=None)
+    owner_id: Optional[str] = Field(alias="ownerId", default=None)
+    description: Optional[str] = Field(default=None)
+
+    @model_validator(mode="before")
+    @classmethod
+    def flatten_sport_type(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            # Garmin often nests sportType or uses sportTypeKey directly
+            sport_data = data.get("sportType")
+            if isinstance(sport_data, dict) and "sportTypeKey" in sport_data:
+                data["sportTypeKey"] = sport_data["sportTypeKey"]
+            
+            # Ensure IDs are strings as requested
+            if "workoutId" in data and data["workoutId"] is not None:
+                data["workoutId"] = str(data["workoutId"])
+            if "ownerId" in data and data["ownerId"] is not None:
+                data["ownerId"] = str(data["ownerId"])
+        return data
 
 class HeartRateTarget(BaseModel):
     """Target based on heart rate BPM."""
