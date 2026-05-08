@@ -146,7 +146,7 @@ def create_step_with_target(step_data: Dict[str, Any], order: int) -> Dict[str, 
     workout_target_type_key = "no.target"
 
     # Support Pydantic models by converting to dict
-    if hasattr(target, "model_dump"):
+    if target is not None and hasattr(target, "model_dump"):
         target = target.model_dump()
 
     if isinstance(target, str):
