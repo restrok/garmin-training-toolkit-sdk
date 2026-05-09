@@ -14,12 +14,12 @@ This project uses `uv` for dependency management.
 
 ```bash
 # In your consumer project (if using uv):
-uv add git+https://github.com/restrok/garmin-training-toolkit-sdk.git#subdirectory=garmin_training_toolkit_sdk
+uv add git+https://github.com/restrok/garmin-training-toolkit-sdk.git#subdirectory=garmin_toolkit
 ```
 
 *Or for local development within this repository:*
 ```bash
-cd garmin_training_toolkit_sdk
+cd garmin_toolkit
 uv sync
 ```
 

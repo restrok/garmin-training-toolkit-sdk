@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-05-08
+
 ### Added
 - **Workout Introspection**: Added `get_workout_templates` to `GarminProvider` to allow listing existing workout definitions from the Garmin library without accessing internal client methods.
 - **Workout Models**: Introduced `WorkoutTemplateSummary` Pydantic model for standardized workout metadata.
