@@ -2,6 +2,7 @@ from typing import Optional
 from pydantic import BaseModel
 from datetime import date
 
+
 class UserProfile(BaseModel):
     display_name: Optional[str] = None
     gender: Optional[str] = None
@@ -10,6 +11,7 @@ class UserProfile(BaseModel):
     weight_kg: Optional[float] = None
     max_hr: Optional[int] = None
     resting_hr: Optional[int] = None
+
 
 class BodyComposition(BaseModel):
     date: date

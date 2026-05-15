@@ -8,16 +8,18 @@ from ..protocol.workouts import WorkoutPlan, WorkoutTemplateSummary
 from ..protocol.biometrics import HRVData, SleepData
 from ..protocol.user import UserProfile
 
+
 class SuccessReport(BaseModel):
     success: bool
     message: str
     uploaded_ids: List[str] = []
 
+
 class BaseBiometricProvider(ABC):
     """
     Abstract Base Class for biometric and activity data providers (Garmin, Suunto, Whoop, etc.)
     """
-    
+
     @abstractmethod
     def get_activities(self, start_date: date, end_date: date) -> List[Activity]:
         """Fetch list of activities within a date range."""
