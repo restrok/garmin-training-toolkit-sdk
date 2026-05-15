@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- **High-Resolution Telemetry**: Added `body_battery`, `vertical_speed`, `vertical_ratio`, and `performance_condition` to `ActivityTelemetryPoint`.
+- **Telemetry Extraction**: Updated `get_activity_telemetry` to map new Garmin API descriptors (`directBodyBattery`, `directVerticalSpeed`, etc.).
+
 ## [0.7.0] - 2026-05-08
 
 ### Added
