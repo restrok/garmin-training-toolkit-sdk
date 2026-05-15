@@ -40,11 +40,15 @@ We maintain a production-grade codebase to ensure reliability in critical data p
 ## Quick Start
 
 ### 1. Authentication
-Garmin utilizes session-based authentication. Use the provided utility to initialize and cache your tokens:
+Garmin utilizes session-based authentication. Use the interactive CLI tool to initialize and cache your tokens:
 ```bash
-# Authenticates and saves session tokens locally
+# Launches an interactive menu to choose your preferred authentication method
 python3 garmin.py auth
 ```
+The toolkit supports three authentication methods:
+- **Terminal:** Direct email and password login.
+- **Browser:** Automated login using a headless browser (bypasses Cloudflare).
+- **Manual:** Paste an SSO ticket from your web browser (most reliable for restricted environments).
 
 ### 2. Data Extraction Example
 ```python
