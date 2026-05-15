@@ -6,7 +6,7 @@ import logging
 import sys
 from typing import NoReturn
 
-from garmin_training_toolkit_sdk.auth import browser_login, save_tokens
+from garmin_training_toolkit_sdk.auth import interactive_auth, save_tokens
 from garmin_training_toolkit_sdk.utils import find_token_file, get_authenticated_client
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -19,8 +19,7 @@ def main() -> None:
     sub = parser.add_subparsers(dest="command")
 
     # Auth Command
-    p_auth = sub.add_parser("auth", help="Authenticate with Garmin Connect via browser")
-    p_auth.add_argument("--headless", action="store_true", help="Run browser in background")
+    sub.add_parser("auth", help="Authenticate with Garmin Connect (Multiple Methods)")
 
     # Extract Command
     sub.add_parser(
@@ -31,9 +30,8 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.command == "auth":
-        log.info("Starting browser authentication...")
         try:
-            tokens = browser_login(headless=args.headless)
+            tokens = interactive_auth()
             if tokens:
                 save_tokens(tokens)
                 log.info("Authentication successful. Tokens saved.")
