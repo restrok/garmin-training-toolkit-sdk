@@ -17,6 +17,10 @@ class ActivityTelemetryPoint(BaseModel):
     ground_contact_time_ms: Optional[float] = None
     temperature_c: Optional[float] = None
     run_walk_index: Optional[float] = None
+    body_battery: Optional[float] = None
+    vertical_speed: Optional[float] = None
+    vertical_ratio: Optional[float] = None
+    performance_condition: Optional[float] = None
 
 class ActivityTelemetry(BaseModel):
     activity_id: int
