@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import List, Optional
 from pydantic import BaseModel, Field
 
+
 class ActivitySplit(BaseModel):
     index: int
     type: Optional[str] = None
@@ -19,6 +20,7 @@ class ActivitySplit(BaseModel):
     # Cycling Specific
     avg_power: Optional[float] = None
     max_power: Optional[float] = None
+
 
 class Activity(BaseModel):
     id: int

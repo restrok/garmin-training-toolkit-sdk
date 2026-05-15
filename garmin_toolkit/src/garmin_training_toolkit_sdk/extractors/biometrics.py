@@ -1,26 +1,48 @@
 import logging
-from typing import List, Optional
-from ..protocol.biometrics import HRVData, SleepData, ReadinessData, BodyBatteryData, StressData, TrainingStatusData
-from ..protocol.user import UserProfile, BodyComposition
+from datetime import datetime, timedelta
+from typing import Any, List, Optional
+
+from garminconnect import Garmin
+
+from ..protocol.biometrics import (
+    BodyBatteryData,
+    HRVData,
+    ReadinessData,
+    SleepData,
+    StressData,
+    TrainingStatusData,
+)
+from ..protocol.user import BodyComposition, UserProfile
 
 log = logging.getLogger(__name__)
 
-def get_user_profile(garmin_client) -> Optional[UserProfile]:
-    """Fetch user profile information by combining data from multiple endpoints."""
+
+def get_user_profile(garmin_client: Garmin) -> Optional[UserProfile]:
+    """Fetch user profile information by combining data from multiple endpoints.
+
+    Args:
+        garmin_client: The Garmin API client instance.
+
+    Returns:
+        A UserProfile object if successful, None otherwise.
+    """
     try:
         profile = garmin_client.get_user_profile()
         settings = garmin_client.get_userprofile_settings()
-        
+
         user_data = profile.get("userData", {})
-        
+
         # Calculate age from birthDate
         age = None
         birth_date_str = user_data.get("birthDate")
         if birth_date_str:
-            from datetime import datetime
             birth_date = datetime.strptime(birth_date_str, "%Y-%m-%d")
             today = datetime.now()
-            age = today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
+            age = (
+                today.year
+                - birth_date.year
+                - ((today.month, today.day) < (birth_date.month, birth_date.day))
+            )
 
         # Weight is in grams in userData
         weight_kg = user_data.get("weight")
@@ -34,34 +56,59 @@ def get_user_profile(garmin_client) -> Optional[UserProfile]:
             height_cm=user_data.get("height"),
             weight_kg=weight_kg,
             max_hr=user_data.get("maxHeartRate"),
-            resting_hr=user_data.get("restingHeartRate")
+            resting_hr=user_data.get("restingHeartRate"),
         )
     except Exception as e:
-        log.warning(f"User profile fetch failed: {e}")
+        log.warning("User profile fetch failed: %s", e)
     return None
 
-def get_body_composition(garmin_client, start_date: str, end_date: str) -> List[BodyComposition]:
-    """Fetch body composition data for a date range."""
+
+def get_body_composition(
+    garmin_client: Garmin, start_date: str, end_date: str
+) -> List[BodyComposition]:
+    """Fetch body composition data for a date range.
+
+    Args:
+        garmin_client: The Garmin API client instance.
+        start_date: Start date string (YYYY-MM-DD).
+        end_date: End date string (YYYY-MM-DD).
+
+    Returns:
+        A list of BodyComposition records.
+    """
     composition_records = []
     try:
         raw_composition = garmin_client.get_body_composition(start_date, end_date)
         if raw_composition and "allMetrics" in raw_composition:
             for m in raw_composition["allMetrics"]:
-                composition_records.append(BodyComposition(
-                    date=m.get("calendarDate"),
-                    weight_kg=m.get("weight"),
-                    bmi=m.get("bmi"),
-                    fat_percentage=m.get("bodyFat"),
-                    muscle_mass_kg=m.get("muscleMass"),
-                    water_percentage=m.get("waterPercentage")
-                ))
+                composition_records.append(
+                    BodyComposition(
+                        date=m.get("calendarDate"),
+                        weight_kg=m.get("weight"),
+                        bmi=m.get("bmi"),
+                        fat_percentage=m.get("bodyFat"),
+                        muscle_mass_kg=m.get("muscleMass"),
+                        water_percentage=m.get("waterPercentage"),
+                    )
+                )
     except Exception as e:
-        log.warning(f"Body composition fetch failed: {e}")
+        log.warning("Body composition fetch failed: %s", e)
     return composition_records
 
-def get_hrv_data(garmin_client, start_date: str, end_date: str) -> List[HRVData]:
-    """Fetch HRV data for a given date range by iterating through each day."""
-    from datetime import datetime, timedelta
+
+def get_hrv_data(
+    garmin_client: Garmin, start_date: str, end_date: str
+) -> List[HRVData]:
+    """Fetch HRV data for a given date range by iterating through each day.
+
+    Args:
+        garmin_client: The Garmin API client instance.
+        start_date: Start date string (YYYY-MM-DD).
+        end_date: End date string (YYYY-MM-DD).
+
+    Returns:
+        A list of HRVData records.
+    """
     hrv_records = []
 
     start = datetime.strptime(start_date, "%Y-%m-%d")
@@ -79,45 +126,59 @@ def get_hrv_data(garmin_client, start_date: str, end_date: str) -> List[HRVData]
                 date = summary.get("calendarDate")
                 if date == curr_str:
                     baseline = summary.get("baseline", {})
-                    hrv_records.append(HRVData(
-                        date=date,
-                        avg_hrv=summary.get("lastNightAvg"),
-                        min_hrv=None,
-                        max_hrv=summary.get("lastNight5MinHigh"),
-                        status=summary.get("status"),
-                        baseline_low=baseline.get("balancedLow"),
-                        baseline_high=baseline.get("balancedUpper")
-                    ))
+                    hrv_records.append(
+                        HRVData(
+                            date=date,
+                            avg_hrv=summary.get("lastNightAvg"),
+                            min_hrv=None,
+                            max_hrv=summary.get("lastNight5MinHigh"),
+                            status=summary.get("status"),
+                            baseline_low=baseline.get("balancedLow"),
+                            baseline_high=baseline.get("balancedUpper"),
+                        )
+                    )
             elif isinstance(raw, list):
                 # Fallback for different API versions or multi-day responses
                 for h in raw:
                     date = h.get("calendarDate")
                     if date == curr_str:
                         baseline = h.get("baseline", {})
-                        hrv_records.append(HRVData(
-                            date=date,
-                            avg_hrv=h.get("averageHRV") or h.get("lastNightAvg"),
-                            min_hrv=h.get("minHRV"),
-                            max_hrv=h.get("maxHRV") or h.get("lastNight5MinHigh"),
-                            status=h.get("status"),
-                            baseline_low=baseline.get("balancedLow"),
-                            baseline_high=baseline.get("balancedUpper")
-                        ))
+                        hrv_records.append(
+                            HRVData(
+                                date=date,
+                                avg_hrv=h.get("averageHRV") or h.get("lastNightAvg"),
+                                min_hrv=h.get("minHRV"),
+                                max_hrv=h.get("maxHRV") or h.get("lastNight5MinHigh"),
+                                status=h.get("status"),
+                                baseline_low=baseline.get("balancedLow"),
+                                baseline_high=baseline.get("balancedUpper"),
+                            )
+                        )
         except Exception as e:
-            log.debug(f"HRV data for {curr_str} not available: {e}")
+            log.debug("HRV data for %s not available: %s", curr_str, e)
         current += timedelta(days=1)
 
     return hrv_records
 
-def get_sleep_data(garmin_client, start_date: str, end_date: str) -> List[SleepData]:
-    """Fetch sleep data by iterating through the date range with robust error handling."""
-    from datetime import datetime, timedelta
-    
+
+def get_sleep_data(
+    garmin_client: Garmin, start_date: str, end_date: str
+) -> List[SleepData]:
+    """Fetch sleep data by iterating through the date range.
+
+    Args:
+        garmin_client: The Garmin API client instance.
+        start_date: Start date string (YYYY-MM-DD).
+        end_date: End date string (YYYY-MM-DD).
+
+    Returns:
+        A list of SleepData records.
+    """
     sleep_records = []
     try:
         curr = datetime.strptime(start_date, "%Y-%m-%d")
         end = datetime.strptime(end_date, "%Y-%m-%d")
-        
+
         while curr <= end:
             date_str = curr.strftime("%Y-%m-%d")
             try:
@@ -129,14 +190,14 @@ def get_sleep_data(garmin_client, start_date: str, end_date: str) -> List[SleepD
                         dto = s["dailySleepDTO"]
                     elif "sleepTimeSeconds" in s:
                         dto = s
-                
+
                 if dto:
-                    log.info(f"Found sleep record for {date_str}")
-                    
+                    log.info("Found sleep record for %s", date_str)
+
                     sleep_scores = dto.get("sleepScores", {})
                     overall_score = sleep_scores.get("overall", {}).get("value")
-                    
-                    def to_int(val):
+
+                    def to_int(val: Any) -> Optional[int]:
                         if val is None:
                             return None
                         try:
@@ -144,43 +205,66 @@ def get_sleep_data(garmin_client, start_date: str, end_date: str) -> List[SleepD
                         except (ValueError, TypeError):
                             return None
 
-                    sleep_records.append(SleepData(
-                        date=dto.get("calendarDate", date_str),
-                        start=to_int(dto.get("sleepStartTimestampGMT")),
-                        end=to_int(dto.get("sleepEndTimestampGMT")),
-                        duration_sec=to_int(dto.get("sleepTimeSeconds")),
-                        deep_sec=to_int(dto.get("deepSleepSeconds")),
-                        light_sec=to_int(dto.get("lightSleepSeconds")),
-                        rem_sec=to_int(dto.get("remSleepSeconds")),
-                        awake_sec=to_int(dto.get("awakeSleepSeconds")),
-                        quality=to_int(overall_score)
-                    ))
-            except Exception:
-                pass
-            
+                    sleep_records.append(
+                        SleepData(
+                            date=dto.get("calendarDate", date_str),
+                            start=to_int(dto.get("sleepStartTimestampGMT")),
+                            end=to_int(dto.get("sleepEndTimestampGMT")),
+                            duration_sec=to_int(dto.get("sleepTimeSeconds")),
+                            deep_sec=to_int(dto.get("deepSleepSeconds")),
+                            light_sec=to_int(dto.get("lightSleepSeconds")),
+                            rem_sec=to_int(dto.get("remSleepSeconds")),
+                            awake_sec=to_int(dto.get("awakeSleepSeconds")),
+                            quality=to_int(overall_score),
+                        )
+                    )
+            except Exception as e:
+                log.debug("Sleep data for %s not available: %s", date_str, e)
+
             curr += timedelta(days=1)
     except Exception as e:
-        log.warning(f"Error in sleep loop: {e}")
-        
+        log.warning("Error in sleep loop: %s", e)
+
     return sleep_records
 
-def get_readiness_data(garmin_client, date: str) -> List[ReadinessData]:
+
+def get_readiness_data(garmin_client: Garmin, date: str) -> List[ReadinessData]:
+    """Fetch morning training readiness data.
+
+    Args:
+        garmin_client: The Garmin API client instance.
+        date: Date string (YYYY-MM-DD).
+
+    Returns:
+        A list of ReadinessData records.
+    """
     readiness_records = []
     try:
         raw_readiness = garmin_client.get_morning_training_readiness(date)
         if raw_readiness and isinstance(raw_readiness, list):
             for r in raw_readiness:
-                readiness_records.append(ReadinessData(
-                    date=r.get("calendarDate", ""),
-                    value=r.get("trainingReadinessValue"),
-                    status=r.get("trainingReadinessStatus")
-                ))
+                readiness_records.append(
+                    ReadinessData(
+                        date=r.get("calendarDate", ""),
+                        value=r.get("trainingReadinessValue"),
+                        status=r.get("trainingReadinessStatus"),
+                    )
+                )
     except Exception as e:
-        log.warning(f"Training readiness fetch failed: {e}")
+        log.warning("Training readiness fetch failed: %s", e)
     return readiness_records
 
-def get_body_battery(garmin_client, date: str) -> Optional[BodyBatteryData]:
-    """Fetch body battery data for a specific date."""
+
+def get_body_battery(garmin_client: Garmin, date: str) -> Optional[BodyBatteryData]:
+    """Fetch body battery data for a specific date.
+
+    Args:
+        garmin_client: The Garmin API client instance.
+        date: Date string (YYYY-MM-DD).
+
+    Returns:
+        A BodyBatteryData object if successful, None otherwise.
+    """
     try:
         raw_bb = garmin_client.get_body_battery(date)
         if raw_bb:
@@ -193,14 +277,23 @@ def get_body_battery(garmin_client, date: str) -> Optional[BodyBatteryData]:
                     drained=data.get("drained"),
                     highest=data.get("highest"),
                     lowest=data.get("lowest"),
-                    values_count=len(values)
+                    values_count=len(values),
                 )
     except Exception as e:
-        log.warning(f"Body battery fetch failed for {date}: {e}")
+        log.warning("Body battery fetch failed for %s: %s", date, e)
     return None
 
-def get_stress_data(garmin_client, date: str) -> Optional[StressData]:
-    """Fetch stress data for a specific date."""
+
+def get_stress_data(garmin_client: Garmin, date: str) -> Optional[StressData]:
+    """Fetch stress data for a specific date.
+
+    Args:
+        garmin_client: The Garmin API client instance.
+        date: Date string (YYYY-MM-DD).
+
+    Returns:
+        A StressData object if successful, None otherwise.
+    """
     try:
         raw_stress = garmin_client.get_stress_data(date)
         if raw_stress:
@@ -213,14 +306,25 @@ def get_stress_data(garmin_client, date: str) -> Optional[StressData]:
                 activity_duration_sec=raw_stress.get("activityStressDuration"),
                 low_stress_duration_sec=raw_stress.get("lowStressDuration"),
                 medium_stress_duration_sec=raw_stress.get("mediumStressDuration"),
-                high_stress_duration_sec=raw_stress.get("highStressDuration")
+                high_stress_duration_sec=raw_stress.get("highStressDuration"),
             )
     except Exception as e:
-        log.warning(f"Stress data fetch failed for {date}: {e}")
+        log.warning("Stress data fetch failed for %s: %s", date, e)
     return None
 
-def get_training_status(garmin_client, date: str) -> Optional[TrainingStatusData]:
-    """Fetch training status for a specific date."""
+
+def get_training_status(
+    garmin_client: Garmin, date: str
+) -> Optional[TrainingStatusData]:
+    """Fetch training status for a specific date.
+
+    Args:
+        garmin_client: The Garmin API client instance.
+        date: Date string (YYYY-MM-DD).
+
+    Returns:
+        A TrainingStatusData object if successful, None otherwise.
+    """
     try:
         raw_status = garmin_client.get_training_status(date)
         if raw_status:
@@ -230,8 +334,8 @@ def get_training_status(garmin_client, date: str) -> Optional[TrainingStatusData
                 acute_load=raw_status.get("currentDayAcuteLoad"),
                 chronic_load=raw_status.get("currentDayChronicLoad"),
                 load_focus=raw_status.get("loadFocus"),
-                vo2max=raw_status.get("vo2MaxValue")
+                vo2max=raw_status.get("vo2MaxValue"),
             )
     except Exception as e:
-        log.warning(f"Training status fetch failed for {date}: {e}")
+        log.warning("Training status fetch failed for %s: %s", date, e)
     return None

@@ -1,11 +1,13 @@
 from typing import Any, List
 from datetime import datetime
 
+
 class MockGarminClient:
     """
     A mock client for Garmin Connect API testing.
     Exposes the same interface as garminconnect.Garmin.
     """
+
     def __init__(self):
         self.workouts = []
         self.scheduled_workouts = []
@@ -18,8 +20,14 @@ class MockGarminClient:
 
     def delete_workout(self, workout_id: str):
         self.deleted_workout_ids.append(str(workout_id))
-        self.workouts = [w for w in self.workouts if str(w.get("workoutId")) != str(workout_id)]
-        self.scheduled_workouts = [w for w in self.scheduled_workouts if str(w.get("workoutId")) != str(workout_id)]
+        self.workouts = [
+            w for w in self.workouts if str(w.get("workoutId")) != str(workout_id)
+        ]
+        self.scheduled_workouts = [
+            w
+            for w in self.scheduled_workouts
+            if str(w.get("workoutId")) != str(workout_id)
+        ]
         return True
 
     def upload_workout(self, workout_dict: dict) -> dict:
@@ -38,27 +46,34 @@ class MockGarminClient:
 
     def schedule_workout(self, workout_id: str, workout_date: str):
         # Check if workout exists
-        workout = next((w for w in self.workouts if str(w.get("workoutId")) == str(workout_id)), None)
+        workout = next(
+            (w for w in self.workouts if str(w.get("workoutId")) == str(workout_id)),
+            None,
+        )
         item = {
             "workoutId": str(workout_id),
             "calendarItemId": str(len(self.scheduled_workouts) + 5000),
             "date": workout_date,
             "itemType": "workout",
-            "title": workout.get("workoutName") if workout else "Scheduled Workout"
+            "title": workout.get("workoutName") if workout else "Scheduled Workout",
         }
         self.scheduled_workouts.append(item)
         return True
 
     def unschedule_workout(self, calendar_item_id: str):
         self.unscheduled_item_ids.append(str(calendar_item_id))
-        self.scheduled_workouts = [w for w in self.scheduled_workouts if str(w.get("calendarItemId")) != str(calendar_item_id)]
+        self.scheduled_workouts = [
+            w
+            for w in self.scheduled_workouts
+            if str(w.get("calendarItemId")) != str(calendar_item_id)
+        ]
         return True
 
     def get_scheduled_workouts(self, workout_date: Any) -> dict:
         if isinstance(workout_date, (int, float)):
-             # Fallback for old positional year if called as (year, month)
-             # but we want to encourage the new signature
-             pass
+            # Fallback for old positional year if called as (year, month)
+            # but we want to encourage the new signature
+            pass
 
         if isinstance(workout_date, str):
             dt = datetime.strptime(workout_date.split()[0], "%Y-%m-%d")
@@ -71,7 +86,7 @@ class MockGarminClient:
 
         year = dt.year
         month = dt.month
-        
+
         items = []
         for w in self.scheduled_workouts:
             w_dt = datetime.strptime(w["date"], "%Y-%m-%d")
@@ -92,9 +107,6 @@ class MockGarminClient:
                 "lastNightAvg": 65.0,
                 "lastNight5MinHigh": 80.0,
                 "status": "BALANCED",
-                "baseline": {
-                    "balancedLow": 60.0,
-                    "balancedUpper": 75.0
-                }
+                "baseline": {"balancedLow": 60.0, "balancedUpper": 75.0},
             }
         }

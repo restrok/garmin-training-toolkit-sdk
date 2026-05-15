@@ -1,6 +1,7 @@
 from typing import List, Optional
 from pydantic import BaseModel
 
+
 class ActivityTelemetryPoint(BaseModel):
     timestamp_ms: int
     lat: Optional[float] = None
@@ -21,6 +22,7 @@ class ActivityTelemetryPoint(BaseModel):
     vertical_speed: Optional[float] = None
     vertical_ratio: Optional[float] = None
     performance_condition: Optional[float] = None
+
 
 class ActivityTelemetry(BaseModel):
     activity_id: int
