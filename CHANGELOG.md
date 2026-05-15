@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.1] - 2026-05-15
+### Added
+- Interactive authentication menu in `garmin.py auth`.
+- Three authentication methods:
+    - **Terminal:** Classic email/password login.
+    - **Browser:** Automated login using Playwright (bypasses Cloudflare).
+    - **Manual:** Paste an SSO ticket for reliable login in restricted environments.
+- Enhanced `auth.py` with guided, user-friendly login flows.
+- Updated documentation in `README.md` to reflect the new authentication process.
+
 ## [Unreleased]
 
 ### Added
