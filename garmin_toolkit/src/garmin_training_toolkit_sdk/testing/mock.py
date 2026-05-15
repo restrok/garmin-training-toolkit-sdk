@@ -84,3 +84,17 @@ class MockGarminClient:
 
     def get_userprofile_settings(self) -> dict:
         return {"displayName": "Mock User"}
+
+    def get_hrv_data(self, date: str) -> dict:
+        return {
+            "hrvSummary": {
+                "calendarDate": date,
+                "lastNightAvg": 65.0,
+                "lastNight5MinHigh": 80.0,
+                "status": "BALANCED",
+                "baseline": {
+                    "balancedLow": 60.0,
+                    "balancedUpper": 75.0
+                }
+            }
+        }

@@ -78,22 +78,30 @@ def get_hrv_data(garmin_client, start_date: str, end_date: str) -> List[HRVData]
                 summary = raw["hrvSummary"]
                 date = summary.get("calendarDate")
                 if date == curr_str:
+                    baseline = summary.get("baseline", {})
                     hrv_records.append(HRVData(
                         date=date,
                         avg_hrv=summary.get("lastNightAvg"),
                         min_hrv=None,
-                        max_hrv=summary.get("lastNight5MinHigh")
+                        max_hrv=summary.get("lastNight5MinHigh"),
+                        status=summary.get("status"),
+                        baseline_low=baseline.get("balancedLow"),
+                        baseline_high=baseline.get("balancedUpper")
                     ))
             elif isinstance(raw, list):
                 # Fallback for different API versions or multi-day responses
                 for h in raw:
                     date = h.get("calendarDate")
                     if date == curr_str:
+                        baseline = h.get("baseline", {})
                         hrv_records.append(HRVData(
                             date=date,
                             avg_hrv=h.get("averageHRV") or h.get("lastNightAvg"),
                             min_hrv=h.get("minHRV"),
-                            max_hrv=h.get("maxHRV") or h.get("lastNight5MinHigh")
+                            max_hrv=h.get("maxHRV") or h.get("lastNight5MinHigh"),
+                            status=h.get("status"),
+                            baseline_low=baseline.get("balancedLow"),
+                            baseline_high=baseline.get("balancedUpper")
                         ))
         except Exception as e:
             log.debug(f"HRV data for {curr_str} not available: {e}")

@@ -52,7 +52,11 @@ def get_activity_telemetry(client, activity_id: int) -> ActivityTelemetry:
                 vertical_oscillation_cm=get_val(metrics_array, "directVerticalOscillation"),
                 ground_contact_time_ms=get_val(metrics_array, "directGroundContactTime"),
                 temperature_c=get_val(metrics_array, "directAmbientTemperature") if get_val(metrics_array, "directAmbientTemperature") is not None else get_val(metrics_array, "directAirTemperature"),
-                run_walk_index=get_val(metrics_array, "directRunWalkIndex")
+                run_walk_index=get_val(metrics_array, "directRunWalkIndex"),
+                body_battery=get_val(metrics_array, "directBodyBattery"),
+                vertical_speed=get_val(metrics_array, "directVerticalSpeed"),
+                vertical_ratio=get_val(metrics_array, "directVerticalRatio"),
+                performance_condition=get_val(metrics_array, "directPerformanceCondition")
             ))
             
         return ActivityTelemetry(

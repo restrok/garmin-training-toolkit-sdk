@@ -1170,3 +1170,17 @@ Accept All
 
 
 
+
+## Activity Details (Telemetry) Mapping
+
+The `get_activity_details` endpoint (internal Garmin Connect API) returns high-resolution metrics. The following mappings are implemented in `get_activity_telemetry`:
+
+| Garmin Descriptor | SDK Field | Description |
+|-------------------|-----------|-------------|
+| directBodyBattery | body_battery | Real-time Body Battery level |
+| directVerticalSpeed | vertical_speed | Vertical speed (climb/descent) |
+| directVerticalRatio | vertical_ratio | Vertical oscillation divided by stride length |
+| directPerformanceCondition | performance_condition | Performance condition score (HRV vs. Pace) |
+| directTimestamp | timestamp_ms | Millisecond timestamp |
+
+These fields are populated from the `activityDetailMetrics` array based on indices found in `metricDescriptors`.

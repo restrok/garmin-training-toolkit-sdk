@@ -6,6 +6,9 @@ class HRVData(BaseModel):
     avg_hrv: Optional[float] = None
     min_hrv: Optional[float] = None
     max_hrv: Optional[float] = None
+    status: Optional[str] = None
+    baseline_low: Optional[float] = None
+    baseline_high: Optional[float] = None
 
 class SleepData(BaseModel):
     date: str
