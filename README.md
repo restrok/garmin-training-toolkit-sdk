@@ -1,77 +1,94 @@
 # Garmin Training Toolkit SDK
 
-A robust, type-safe Python SDK for extracting biometric data and telemetry from Garmin Connect.
+A high-performance, strictly typed Python SDK for extracting biometric data, high-resolution telemetry, and managing complex workout plans on Garmin Connect.
 
 ## Purpose
 
-This toolkit is designed as a raw data connector. It handles authentication, rate limiting, and data extraction from Garmin's unofficial APIs, returning clean, typed Pydantic models. It is built to be consumed by external Data Pipelines (like a Data Lakehouse) or AI systems (like LangGraph).
+This toolkit serves as a professional-grade data connector for the Garmin ecosystem. It abstracts the complexities of Garmin's unofficial APIs, handling authentication, session management, and rate limiting, while parsing raw responses into clean, validated **Pydantic v2** models.
 
-**Note:** This repository is strictly an SDK. It does not contain AI logic, training plan generators, or an API server (FastAPI).
+It is purpose-built for:
+- **Data Engineering:** Powering Data Lakes or Warehouse systems with high-fidelity biometric history.
+- **AI/ML Pipelines:** Providing structured health and performance context for LLM-based coaching or predictive analysis.
+- **Quantified Self:** Bridging the gap between Garmin's closed ecosystem and modern, type-safe Pythonic workflows.
+
+## Key Features
+
+- **Strictly Typed:** 100% Pydantic v2 models for all domain entities (Activities, Telemetry, HRV, Sleep, Training Readiness, etc.).
+- **Rich Biometrics:** Capture advanced metrics including HRV Baselines/Status, Sleep Scores, Body Battery, and Stress levels.
+- **High-Res Telemetry:** Extraction of second-by-second data (GPS, Heart Rate, Power, Cadence, Temperature) from activity records.
+- **Workout Management:** Programmatic creation and uploading of structured workout plans with support for nested repeat groups, specific targets (HR zones, Pace, Power), and calendar scheduling.
+- **Local Weather Engine:** Integrated SQLite-backed module using **Open-Meteo** for historical weather enrichment of activities.
+- **Engineering Excellence:** Developed using the **Google Python Style Guide**, enforced via `ruff` and `mypy`.
 
 ## Installation
 
-This project uses `uv` for dependency management.
+This project uses `uv` for lightning-fast dependency management and isolation.
 
 ```bash
-# In your consumer project (if using uv):
+# Add as a dependency to your project:
 uv add git+https://github.com/restrok/garmin-training-toolkit-sdk.git#subdirectory=garmin_toolkit
 ```
 
-*Or for local development within this repository:*
-```bash
-cd garmin_toolkit
-uv sync
-```
+## Engineering Standards
+
+We maintain a production-grade codebase to ensure reliability in critical data pipelines:
+- **Style:** Adherence to the [Google Python Style Guide](https://google.github.io/styleguide/pyguide.html).
+- **Quality:** Continuous linting and formatting via `ruff`.
+- **Type Safety:** 100% type coverage verified with strict `mypy` configurations.
+- **Testing:** Comprehensive test suite leveraging `pytest` and localized mocks.
 
 ## Quick Start
 
 ### 1. Authentication
-Garmin uses session tokens. To log in and cache your session locally:
-
+Garmin utilizes session-based authentication. Use the provided utility to initialize and cache your tokens:
 ```bash
-# Runs a headless browser to authenticate and save tokens
+# Authenticates and saves session tokens locally
 python3 garmin.py auth
 ```
 
-### 2. Extracting Data (Python Example)
-
+### 2. Data Extraction Example
 ```python
-import json
 from garmin_training_toolkit_sdk.utils import get_authenticated_client, find_token_file
-from garmin_training_toolkit_sdk.extractors import get_activities, get_activity_telemetry
+from garmin_training_toolkit_sdk.extractors.biometrics import get_hrv_data
 
-# 1. Connect
-token_file = find_token_file()
-client = get_authenticated_client(token_file)
+# 1. Connect using cached tokens
+client = get_authenticated_client(find_token_file())
 
-# 2. Extract Activity Summary (Pydantic model)
-activities = get_activities(client, "2026-04-10", "2026-04-20")
-latest = activities[0]
-print(f"Latest run: {latest.name} ({latest.distance_m} meters)")
+# 2. Extract HRV data (returns Pydantic models with baseline and status)
+hrv_history = get_hrv_data(client, "2026-05-01", "2026-05-15")
 
-# 3. Extract Detailed Telemetry (Second-by-second data)
-telemetry = get_activity_telemetry(client, latest.id)
-print(f"Total ticks: {telemetry.metric_count}")
-
-# Pydantic makes serialization easy
-print(json.dumps(telemetry.ticks[0].model_dump(), indent=2))
+for record in hrv_history:
+    print(f"Date: {record.date} | Avg HRV: {record.avg_hrv}ms | Status: {record.status}")
 ```
 
-## Available Extractors
+### 3. Uploading Workouts
+```python
+from garmin_training_toolkit_sdk.uploaders.workouts import upload_workout
+from garmin_training_toolkit_sdk.protocol.workouts import WorkoutTemplate, WorkoutStep
 
-All extractors return typed Pydantic models ensuring data reliability.
+# Define and push custom interval sessions directly to your device
+# (See examples for complex RepeatGroup and Target implementations)
+```
 
-*   `get_activities(client, start_date, end_date)`
-*   `get_activity_telemetry(client, activity_id)` -> Second-by-second telemetry (GPS, HR, Power, etc).
-*   `get_hrv_data(client, start_date, end_date)`
-*   `get_sleep_data(client, start_date, end_date)`
-*   `get_readiness_data(client, date)`
-*   `get_body_battery(client, date)`
-*   `get_stress_data(client, date)`
-*   `get_training_status(client, date)`
+## Core Modules
 
-## Included Modules
+- **`extractors`**: Robust handlers for pulling Activities, Telemetry, Daily Biometrics (Sleep, HRV, Stress, Readiness), and User Profile data.
+- **`weather`**: A complete local engine for historical weather context. Includes SQLite storage for caching and Open-Meteo integration for license-free historical backfills.
+- **`uploaders`**: Specialized logic for pushing data back to Garmin, including a Workout creator and a Calendar scheduler.
+- **`protocol`**: The source of truth for our data models, ensuring consistent schemas across the entire SDK.
 
-While the core focus is extraction, the SDK also bundles:
-*   **`garmin_training_toolkit_sdk.uploaders`**: Logic for uploading custom workout plans back to Garmin.
-*   **`garmin_training_toolkit_sdk.weather`**: A local SQLite-backed weather module (OpenMeteo) to enrich activity data with historical weather context.
+## Development
+
+```bash
+# Setup environment
+cd garmin_toolkit
+uv sync
+
+# Quality checks
+uv run pytest        # Execute test suite
+uv run ruff check .  # Check style and linting
+uv run mypy .        # Verify type safety
+```
+
+---
+*Disclaimer: This project is an independent tool and is not affiliated with, authorized, maintained, sponsored, or endorsed by Garmin Ltd. or any of its affiliates.*
