@@ -286,7 +286,7 @@ class WorkoutTemplate(BaseModel):
         Returns:
             A list of validated steps.
         """
-        processed_steps = []
+        processed_steps: List[Union[WorkoutStep, RepeatGroup]] = []
         for step in v:
             if isinstance(step, list):
                 processed_steps.append(WorkoutStep.from_list(step))

@@ -35,7 +35,7 @@ def fetch_current(
             raise ValueError("City not configured. Run set_city() first.")
         lat = coords["lat"]
         lon = coords["lon"]
-    params = {
+    params: Dict[str, Any] = {
         "latitude": lat,
         "longitude": lon,
         "current": "temperature_2m,relative_humidity_2m,apparent_temperature",
@@ -66,7 +66,7 @@ def fetch_by_coords(lat: float, lon: float) -> Dict[str, Any]:
     Returns:
         Dict[str, Any]: Current weather data record.
     """
-    params = {
+    params: Dict[str, Any] = {
         "latitude": lat,
         "longitude": lon,
         "current": "temperature_2m,relative_humidity_2m,apparent_temperature",
