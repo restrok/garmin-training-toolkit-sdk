@@ -27,7 +27,12 @@ def geocode_city(city_name: str) -> Dict[str, Any]:
     Raises:
         ValueError: If the city is not found.
     """
-    params: Dict[str, Any] = {"name": city_name, "count": 1, "language": "en", "format": "json"}
+    params: Dict[str, Any] = {
+        "name": city_name,
+        "count": 1,
+        "language": "en",
+        "format": "json",
+    }
     resp = requests.get(GEOCODE_URL, params=params, timeout=10)
     resp.raise_for_status()
     data = resp.json()

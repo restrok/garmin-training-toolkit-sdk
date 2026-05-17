@@ -62,7 +62,7 @@ client = get_authenticated_client(find_token_file())
 hrv_history = get_hrv_data(client, "2026-05-01", "2026-05-15")
 
 for record in hrv_history:
-    print(f"Date: {record.date} | Avg HRV: {record.avg_hrv}ms | Status: {record.status}")
+    print(f"Date: {record.date} | Avg HRV: {record.last_night_avg}ms | Status: {record.status}")
 ```
 
 ### 3. Uploading Workouts
