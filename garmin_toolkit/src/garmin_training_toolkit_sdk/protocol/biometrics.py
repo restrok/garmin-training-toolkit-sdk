@@ -10,7 +10,7 @@ class HRVData(BaseModel):
 
     Attributes:
         date: The calendar date (YYYY-MM-DD).
-        avg_hrv: Average HRV during the last night.
+        last_night_avg: Average HRV during the last night.
         min_hrv: Minimum HRV during the last night.
         max_hrv: Maximum HRV during the last night.
         status: HRV status (e.g., "BALANCED").
@@ -19,7 +19,7 @@ class HRVData(BaseModel):
     """
 
     date: str
-    avg_hrv: Optional[float] = None
+    last_night_avg: Optional[float] = None
     min_hrv: Optional[float] = None
     max_hrv: Optional[float] = None
     status: Optional[str] = None

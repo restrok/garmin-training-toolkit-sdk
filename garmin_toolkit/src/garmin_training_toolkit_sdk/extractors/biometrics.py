@@ -2,7 +2,7 @@ import logging
 from datetime import datetime, timedelta
 from typing import Any, List, Optional
 
-from garminconnect import Garmin
+from garminconnect import Garmin, GarminConnectConnectionError
 
 from ..protocol.biometrics import (
     BodyBatteryData,
@@ -129,7 +129,7 @@ def get_hrv_data(
                     hrv_records.append(
                         HRVData(
                             date=date,
-                            avg_hrv=summary.get("lastNightAvg"),
+                            last_night_avg=summary.get("lastNightAvg"),
                             min_hrv=None,
                             max_hrv=summary.get("lastNight5MinHigh"),
                             status=summary.get("status"),
@@ -146,7 +146,7 @@ def get_hrv_data(
                         hrv_records.append(
                             HRVData(
                                 date=date,
-                                avg_hrv=h.get("averageHRV") or h.get("lastNightAvg"),
+                                last_night_avg=h.get("averageHRV") or h.get("lastNightAvg"),
                                 min_hrv=h.get("minHRV"),
                                 max_hrv=h.get("maxHRV") or h.get("lastNight5MinHigh"),
                                 status=h.get("status"),
@@ -154,7 +154,32 @@ def get_hrv_data(
                                 baseline_high=baseline.get("balancedUpper"),
                             )
                         )
-        except Exception as e:
+        except (GarminConnectConnectionError, Exception) as e:
+            error_msg = str(e).lower()
+            if "404" in error_msg or "400" in error_msg:
+                log.info(
+                    "HRV endpoint 404/400 for %s. Attempting sleep fallback...", curr_str
+                )
+                try:
+                    # Fallback Strategy: Extract from Sleep Payload
+                    sleep_data = garmin_client.get_sleep_data(cdate=curr_str)
+                    if isinstance(sleep_data, dict):
+                        fallback_avg_hrv = sleep_data.get("avgOvernightHrv")
+                        status = sleep_data.get("hrvStatus")
+                        if fallback_avg_hrv is not None:
+                            log.info("Successfully extracted HRV fallback from sleep data")
+                            hrv_records.append(
+                                HRVData(
+                                    date=curr_str,
+                                    last_night_avg=float(fallback_avg_hrv),
+                                    status=status,
+                                )
+                            )
+                            current += timedelta(days=1)
+                            continue
+                except Exception as sleep_err:
+                    log.debug("Sleep fallback failed for %s: %s", curr_str, sleep_err)
+
             log.debug("HRV data for %s not available: %s", curr_str, e)
         current += timedelta(days=1)
 

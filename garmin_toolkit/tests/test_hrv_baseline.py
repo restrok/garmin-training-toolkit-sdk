@@ -18,7 +18,7 @@ def test_get_hrv_data_with_baseline() -> None:
     assert len(results) == 1
     hrv = results[0]
     assert hrv.date == "2024-05-10"
-    assert hrv.avg_hrv == 65.0
+    assert hrv.last_night_avg == 65.0
     assert hrv.max_hrv == 80.0
     assert hrv.status == "BALANCED"
     assert hrv.baseline_low == 60.0
