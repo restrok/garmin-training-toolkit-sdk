@@ -28,7 +28,7 @@ def deep_search_keys(activity_id):
             for item in obj:
                 find_matches(item, pattern, found_keys)
 
-    matches = set()
+    matches: set[str] = set()
     find_matches(details, "walk", matches)
     find_matches(details, "run", matches)
 

@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.2] - 2026-05-16
+### Fixed
+- **Type Safety:** Corrected Liskov Substitution Principle violations in `MockProvider` tests by aligning method signatures with `BaseBiometricProvider`.
+- **Debugging Tools:** Added missing type annotations to `debug_activity.py` to ensure clean mypy results.
+
 ## [0.7.1] - 2026-05-15
 ### Added
 - Interactive authentication menu in `garmin.py auth`.

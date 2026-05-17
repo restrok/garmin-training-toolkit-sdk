@@ -17,13 +17,14 @@ def test_tool_factory() -> None:
     class MockProvider(BaseBiometricProvider):
         """Mock implementation of BaseBiometricProvider for testing."""
 
-        def get_activities(self, start_date: str, end_date: str) -> List[Any]:
+        def get_activities(self, start_date: date, end_date: date) -> List[Any]:
             """Mock get_activities."""
             return []
 
-        def get_telemetry(self, activity_id: int) -> Optional[Any]:
+        def get_telemetry(self, activity_id: str) -> Any:
             """Mock get_telemetry."""
-            return None
+            from garmin_training_toolkit_sdk.protocol.telemetry import ActivityTelemetry
+            return ActivityTelemetry(activity_id=int(activity_id), metric_count=0, ticks=[])
 
         def upload_training_plan(self, plan: Any) -> SuccessReport:
             """Mock upload_training_plan."""
@@ -33,7 +34,7 @@ def test_tool_factory() -> None:
             """Mock get_workout_templates."""
             return []
 
-        def get_calendar_range(self, start_date: str, end_date: str) -> List[Any]:
+        def get_calendar_range(self, start_date: date, end_date: date) -> List[Any]:
             """Mock get_calendar_range."""
             return []
 
@@ -45,11 +46,11 @@ def test_tool_factory() -> None:
             """Mock delete_workout_template."""
             return True
 
-        def get_sleep_history(self, start_date: str, end_date: str) -> List[Any]:
+        def get_sleep_history(self, start_date: date, end_date: date) -> List[Any]:
             """Mock get_sleep_history."""
             return []
 
-        def get_hrv_history(self, start_date: str, end_date: str) -> List[Any]:
+        def get_hrv_history(self, start_date: date, end_date: date) -> List[Any]:
             """Mock get_hrv_history."""
             return []
 

@@ -1,7 +1,7 @@
 """Tests for HRV fallback mechanism."""
 
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 from garmin_training_toolkit_sdk.extractors.biometrics import get_hrv_data
 from garmin_training_toolkit_sdk.protocol.biometrics import HRVData
@@ -23,7 +23,7 @@ class TestHRVFallback(unittest.TestCase):
         self.client.get_sleep_data.return_value = {
             "avgOvernightHrv": 42.0,
             "hrvStatus": "BALANCED",
-            "calendarDate": "2026-05-16"
+            "calendarDate": "2026-05-16",
         }
 
         # 3. Call get_hrv_data
@@ -36,7 +36,7 @@ class TestHRVFallback(unittest.TestCase):
         self.assertEqual(hrv.date, "2026-05-16")
         self.assertEqual(hrv.last_night_avg, 42.0)
         self.assertEqual(hrv.status, "BALANCED")
-        
+
         # Ensure both endpoints were called
         self.client.get_hrv_data.assert_called_with("2026-05-16")
         self.client.get_sleep_data.assert_called_with(cdate="2026-05-16")
@@ -61,7 +61,7 @@ class TestHRVFallback(unittest.TestCase):
         # 2. Setup Sleep endpoint to return no HRV data
         self.client.get_sleep_data.return_value = {
             "calendarDate": "2026-05-16",
-            "dailySleepDTO": {"sleepTimeSeconds": 28800}
+            "dailySleepDTO": {"sleepTimeSeconds": 28800},
         }
 
         # 3. Call get_hrv_data

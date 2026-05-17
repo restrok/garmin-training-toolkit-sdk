@@ -146,7 +146,8 @@ def get_hrv_data(
                         hrv_records.append(
                             HRVData(
                                 date=date,
-                                last_night_avg=h.get("averageHRV") or h.get("lastNightAvg"),
+                                last_night_avg=h.get("averageHRV")
+                                or h.get("lastNightAvg"),
                                 min_hrv=h.get("minHRV"),
                                 max_hrv=h.get("maxHRV") or h.get("lastNight5MinHigh"),
                                 status=h.get("status"),
@@ -158,7 +159,8 @@ def get_hrv_data(
             error_msg = str(e).lower()
             if "404" in error_msg or "400" in error_msg:
                 log.info(
-                    "HRV endpoint 404/400 for %s. Attempting sleep fallback...", curr_str
+                    "HRV endpoint 404/400 for %s. Attempting sleep fallback...",
+                    curr_str,
                 )
                 try:
                     # Fallback Strategy: Extract from Sleep Payload
@@ -167,7 +169,9 @@ def get_hrv_data(
                         fallback_avg_hrv = sleep_data.get("avgOvernightHrv")
                         status = sleep_data.get("hrvStatus")
                         if fallback_avg_hrv is not None:
-                            log.info("Successfully extracted HRV fallback from sleep data")
+                            log.info(
+                                "Successfully extracted HRV fallback from sleep data"
+                            )
                             hrv_records.append(
                                 HRVData(
                                     date=curr_str,
