@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime, timedelta
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Tuple
 
 from garminconnect import Garmin, GarminConnectConnectionError
 
@@ -235,6 +235,76 @@ def get_sleep_data(
                         except (ValueError, TypeError):
                             return None
 
+                            # Extract restless moments
+
+                    restless_moments = to_int(
+                        dto.get("restlessMomentsCount")
+                        if dto.get("restlessMomentsCount") is not None
+                        else (
+                            s.get("restlessMomentsCount")
+                            if isinstance(s, dict)
+                            else None
+                        )
+                    )
+
+                    # Extract body battery change during sleep
+                    body_battery_change = to_int(
+                        dto.get("bodyBatteryChange")
+                        if dto.get("bodyBatteryChange") is not None
+                        else (
+                            s.get("bodyBatteryChange") if isinstance(s, dict) else None
+                        )
+                    )
+
+                    # Extract average overnight HRV
+                    avg_overnight_hrv = None
+                    raw_avg_hrv = (
+                        s.get("avgOvernightHrv")
+                        if isinstance(s, dict) and s.get("avgOvernightHrv") is not None
+                        else dto.get("avgOvernightHrv")
+                    )
+                    if raw_avg_hrv is not None:
+                        try:
+                            avg_overnight_hrv = float(raw_avg_hrv)
+                        except (ValueError, TypeError):
+                            avg_overnight_hrv = None
+
+                    # Extract 5-minute raw HRV readings [(timestamp_ms, hrv_value)]
+                    hrv_readings_list: List[Tuple[int, float]] = []
+                    raw_readings = (
+                        s.get("hrvReadings")
+                        if isinstance(s, dict)
+                        and isinstance(s.get("hrvReadings"), list)
+                        else dto.get("hrvReadings", [])
+                    )
+                    if isinstance(raw_readings, list):
+                        for reading in raw_readings:
+                            if isinstance(reading, dict):
+                                hrv_val = reading.get("hrvValue")
+                                ts_val = (
+                                    reading.get("readingTimeGmt")
+                                    or reading.get("timestampMs")
+                                    or reading.get("readingTimeLocal")
+                                )
+                                if hrv_val is not None and ts_val is not None:
+                                    try:
+                                        if isinstance(ts_val, (int, float)):
+                                            ts_epoch = int(ts_val)
+                                        else:
+                                            iso_str = str(ts_val).replace("Z", "")
+                                            if "." in iso_str:
+                                                head, tail = iso_str.split(".", 1)
+                                                tail_digits = "".join([c for c in tail if c.isdigit()])
+                                                tail_norm = (tail_digits + "000000")[:6]
+                                                iso_str = f"{head}.{tail_norm}"
+                                            ts_dt = datetime.fromisoformat(iso_str)
+                                            ts_epoch = int(ts_dt.timestamp() * 1000)
+                                        hrv_readings_list.append(
+                                            (ts_epoch, float(hrv_val))
+                                        )
+                                    except Exception:
+                                        pass
+
                     sleep_records.append(
                         SleepData(
                             date=dto.get("calendarDate", date_str),
@@ -246,6 +316,10 @@ def get_sleep_data(
                             rem_sec=to_int(dto.get("remSleepSeconds")),
                             awake_sec=to_int(dto.get("awakeSleepSeconds")),
                             quality=to_int(overall_score),
+                            restless_moments=restless_moments,
+                            body_battery_change=body_battery_change,
+                            avg_overnight_hrv=avg_overnight_hrv,
+                            hrv_readings=hrv_readings_list,
                         )
                     )
             except Exception as e:
