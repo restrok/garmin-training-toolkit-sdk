@@ -63,6 +63,10 @@ class SleepData(BaseModel):
     rem_sec: Optional[int] = None
     awake_sec: Optional[int] = None
     quality: Optional[int] = None
+    restless_moments: Optional[int] = None
+    body_battery_change: Optional[int] = None
+    avg_overnight_hrv: Optional[float] = None
+    hrv_readings: List[Tuple[int, float]] = Field(default_factory=list)
 
 
 class ReadinessData(BaseModel):
